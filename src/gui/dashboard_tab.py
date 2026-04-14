@@ -14,159 +14,153 @@ class DashboardTab(tk.Frame):
     def setup_ui(self):
         # Título
         title_frame = tk.Frame(self, bg='#0a0a1a')
-        title_frame.pack(fill='x', pady=20, padx=30)
-        tk.Label(title_frame, text="📊 DASHBOARD", font=('Arial', 28, 'bold'),
+        title_frame.pack(fill='x', pady=15, padx=30)
+        tk.Label(title_frame, text="📊 DASHBOARD", font=('Arial', 26, 'bold'),
                 bg='#0a0a1a', fg='#00ff88').pack()
         tk.Label(title_frame, text="Monitoramento em tempo real", 
-                bg='#0a0a1a', fg='#888', font=('Arial', 11)).pack()
+                bg='#0a0a1a', fg='#888', font=('Arial', 10)).pack()
         
-        # Cards - Linha 1
-        cards_frame1 = tk.Frame(self, bg='#0a0a1a')
-        cards_frame1.pack(fill='x', padx=30, pady=10)
+        # Container principal para os cards (3x3)
+        cards_container = tk.Frame(self, bg='#0a0a1a')
+        cards_container.pack(fill='both', expand=True, padx=30, pady=10)
         
-        # Card Ameaças
-        c1 = tk.Frame(cards_frame1, bg='#16213e', relief='ridge', bd=2, width=220, height=130)
-        c1.pack(side='left', padx=10, expand=True, fill='both')
-        c1.pack_propagate(False)
-        tk.Label(c1, text="🛡️ AMEAÇAS", bg='#16213e', fg='#ff4444', font=('Arial', 12, 'bold')).pack(pady=(15,5))
-        self.threats_label = tk.Label(c1, text="0", bg='#16213e', fg='#ff4444', font=('Arial', 32, 'bold'))
-        self.threats_label.pack()
+        # Configurar grid 3x3
+        for i in range(3):
+            cards_container.grid_columnconfigure(i, weight=1)
+            cards_container.grid_rowconfigure(i, weight=1)
         
-        # Card Bloqueios
-        c2 = tk.Frame(cards_frame1, bg='#16213e', relief='ridge', bd=2, width=220, height=130)
-        c2.pack(side='left', padx=10, expand=True, fill='both')
-        c2.pack_propagate(False)
-        tk.Label(c2, text="🚫 BLOQUEIOS", bg='#16213e', fg='#ff8800', font=('Arial', 12, 'bold')).pack(pady=(15,5))
-        self.blocked_label = tk.Label(c2, text="0", bg='#16213e', fg='#ff8800', font=('Arial', 32, 'bold'))
-        self.blocked_label.pack()
+        # Definir todos os cards (9 cards)
+        self.cards = {}
         
-        # Card Firewall
-        c3 = tk.Frame(cards_frame1, bg='#16213e', relief='ridge', bd=2, width=220, height=130)
-        c3.pack(side='left', padx=10, expand=True, fill='both')
-        c3.pack_propagate(False)
-        tk.Label(c3, text="🔥 FIREWALL", bg='#16213e', fg='#ff6600', font=('Arial', 12, 'bold')).pack(pady=(15,5))
-        self.firewall_label = tk.Label(c3, text="VERIFICANDO...", bg='#16213e', fg='#ff6600', font=('Arial', 16, 'bold'))
-        self.firewall_label.pack()
+        cards_data = [
+            # Linha 1
+            ("🛡️", "AMEAÇAS DETECTADAS", "threats", "#ff4444", "0"),
+            ("🚫", "IPs BLOQUEADOS", "blocked", "#ff8800", "0"),
+            ("🔥", "FIREWALL", "firewall", "#ff6600", "VERIFICANDO"),
+            # Linha 2
+            ("📦", "PACOTES ANALISADOS", "packets", "#00ccff", "0"),
+            ("🔗", "CONEXÕES ATIVAS", "connections", "#aa66ff", "0"),
+            ("⏱️", "TEMPO ATIVO", "uptime", "#00ff88", "00:00:00"),
+            # Linha 3
+            ("💻", "CPU", "cpu", "#00ff88", "0%"),
+            ("💾", "MEMÓRIA RAM", "memory", "#00ff88", "0%"),
+            ("🎯", "NÍVEL DE RISCO", "risk", "#ffaa00", "BAIXO")
+        ]
         
-        # Cards - Linha 2
-        cards_frame2 = tk.Frame(self, bg='#0a0a1a')
-        cards_frame2.pack(fill='x', padx=30, pady=10)
+        for idx, (icon, title, key, color, default) in enumerate(cards_data):
+            row = idx // 3
+            col = idx % 3
+            
+            # Criar card
+            card = tk.Frame(cards_container, bg='#16213e', relief='ridge', bd=2)
+            card.grid(row=row, column=col, padx=8, pady=8, sticky='nsew')
+            
+            # Ícone e título
+            title_frame = tk.Frame(card, bg='#16213e')
+            title_frame.pack(fill='x', pady=(12, 5))
+            tk.Label(title_frame, text=icon, bg='#16213e', fg=color, font=('Arial', 20)).pack(side='left', padx=(15, 5))
+            tk.Label(title_frame, text=title, bg='#16213e', fg='#ccc', font=('Arial', 10, 'bold')).pack(side='left')
+            
+            # Valor
+            if key == "firewall":
+                value_font = ('Arial', 14, 'bold')
+            else:
+                value_font = ('Arial', 24, 'bold')
+            
+            self.cards[key] = tk.Label(card, text=default, bg='#16213e', fg=color, 
+                                        font=value_font)
+            self.cards[key].pack(pady=(5, 12))
         
-        # Card Pacotes
-        c4 = tk.Frame(cards_frame2, bg='#16213e', relief='ridge', bd=2, width=220, height=130)
-        c4.pack(side='left', padx=10, expand=True, fill='both')
-        c4.pack_propagate(False)
-        tk.Label(c4, text="📦 PACOTES", bg='#16213e', fg='#00ccff', font=('Arial', 12, 'bold')).pack(pady=(15,5))
-        self.packets_label = tk.Label(c4, text="0", bg='#16213e', fg='#00ccff', font=('Arial', 32, 'bold'))
-        self.packets_label.pack()
+        # Barra de status adicional na parte inferior
+        status_bar = tk.Frame(self, bg='#16213e', relief='ridge', bd=2)
+        status_bar.pack(fill='x', padx=30, pady=10)
         
-        # Card Conexões
-        c5 = tk.Frame(cards_frame2, bg='#16213e', relief='ridge', bd=2, width=220, height=130)
-        c5.pack(side='left', padx=10, expand=True, fill='both')
-        c5.pack_propagate(False)
-        tk.Label(c5, text="🔗 CONEXÕES", bg='#16213e', fg='#aa66ff', font=('Arial', 12, 'bold')).pack(pady=(15,5))
-        self.conn_label = tk.Label(c5, text="0", bg='#16213e', fg='#aa66ff', font=('Arial', 32, 'bold'))
-        self.conn_label.pack()
+        tk.Label(status_bar, text="🟢 STATUS DO SISTEMA", font=('Arial', 10, 'bold'),
+                bg='#16213e', fg='#00ff88').pack(side='left', padx=15, pady=8)
         
-        # Card Tempo Ativo
-        c6 = tk.Frame(cards_frame2, bg='#16213e', relief='ridge', bd=2, width=220, height=130)
-        c6.pack(side='left', padx=10, expand=True, fill='both')
-        c6.pack_propagate(False)
-        tk.Label(c6, text="⏱️ TEMPO ATIVO", bg='#16213e', fg='#00ff88', font=('Arial', 12, 'bold')).pack(pady=(15,5))
-        self.uptime_label = tk.Label(c6, text="00:00:00", bg='#16213e', fg='#00ff88', font=('Arial', 20, 'bold'))
-        self.uptime_label.pack()
+        self.defense_status = tk.Label(status_bar, text="DEFESA: INATIVA", 
+                                       bg='#16213e', fg='#ff4444', font=('Arial', 9, 'bold'))
+        self.defense_status.pack(side='left', padx=15)
         
-        # Status do Sistema
-        sys_frame = tk.Frame(self, bg='#16213e', relief='ridge', bd=2)
-        sys_frame.pack(fill='x', padx=30, pady=10)
-        
-        tk.Label(sys_frame, text="🖥️ STATUS DO SISTEMA", font=('Arial', 14, 'bold'),
-                bg='#16213e', fg='#00ff88').pack(pady=10)
-        
-        status_grid = tk.Frame(sys_frame, bg='#16213e')
-        status_grid.pack(fill='x', padx=20, pady=10)
-        
-        # Firewall
-        f1 = tk.Frame(status_grid, bg='#0f3460', relief='ridge', bd=1, width=200, height=60)
-        f1.pack(side='left', padx=5, pady=5, expand=True, fill='both')
-        f1.pack_propagate(False)
-        tk.Label(f1, text="🔥 FIREWALL", bg='#0f3460', fg='#ff6600', font=('Arial', 10, 'bold')).pack(pady=(5,0))
-        self.fw_status = tk.Label(f1, text="Verificando...", bg='#0f3460', fg='white', font=('Arial', 11))
-        self.fw_status.pack()
-        
-        # Defesa
-        f2 = tk.Frame(status_grid, bg='#0f3460', relief='ridge', bd=1, width=200, height=60)
-        f2.pack(side='left', padx=5, pady=5, expand=True, fill='both')
-        f2.pack_propagate(False)
-        tk.Label(f2, text="🛡️ DEFESA", bg='#0f3460', fg='#00ff88', font=('Arial', 10, 'bold')).pack(pady=(5,0))
-        self.defense_status = tk.Label(f2, text="Inativa", bg='#0f3460', fg='white', font=('Arial', 11))
-        self.defense_status.pack()
-        
-        # CPU
-        f3 = tk.Frame(status_grid, bg='#0f3460', relief='ridge', bd=1, width=200, height=60)
-        f3.pack(side='left', padx=5, pady=5, expand=True, fill='both')
-        f3.pack_propagate(False)
-        tk.Label(f3, text="💻 CPU", bg='#0f3460', fg='#00ccff', font=('Arial', 10, 'bold')).pack(pady=(5,0))
-        self.cpu_label = tk.Label(f3, text="0%", bg='#0f3460', fg='white', font=('Arial', 11))
-        self.cpu_label.pack()
-        
-        # Memória
-        f4 = tk.Frame(status_grid, bg='#0f3460', relief='ridge', bd=1, width=200, height=60)
-        f4.pack(side='left', padx=5, pady=5, expand=True, fill='both')
-        f4.pack_propagate(False)
-        tk.Label(f4, text="💾 MEMÓRIA", bg='#0f3460', fg='#aa66ff', font=('Arial', 10, 'bold')).pack(pady=(5,0))
-        self.mem_label = tk.Label(f4, text="0%", bg='#0f3460', fg='white', font=('Arial', 11))
-        self.mem_label.pack()
+        self.last_update = tk.Label(status_bar, text="Última atualização: --:--:--", 
+                                    bg='#16213e', fg='#888', font=('Arial', 8))
+        self.last_update.pack(side='right', padx=15)
         
         # Atualizar firewall imediatamente
         self.update_firewall_status()
         
     def update_stats(self, stats):
-        self.threats_label.config(text=str(stats.get("threats_detected", 0)))
-        self.blocked_label.config(text=str(stats.get("threats_blocked", 0)))
-        self.packets_label.config(text=str(stats.get("packets_analyzed", 0)))
-        self.conn_label.config(text=str(stats.get("active_connections", 0)))
+        # Atualizar valores dos cards
+        self.cards["threats"].config(text=str(stats.get("threats_detected", 0)))
+        self.cards["blocked"].config(text=str(stats.get("threats_blocked", 0)))
+        self.cards["packets"].config(text=str(stats.get("packets_analyzed", 0)))
+        self.cards["connections"].config(text=str(stats.get("active_connections", 0)))
         
+        # Calcular nível de risco baseado nas ameaças
+        threats = stats.get("threats_detected", 0)
+        if threats == 0:
+            risk = "BAIXO"
+            risk_color = "#00ff88"
+        elif threats < 10:
+            risk = "MÉDIO"
+            risk_color = "#ffaa00"
+        else:
+            risk = "ALTO"
+            risk_color = "#ff4444"
+        
+        self.cards["risk"].config(text=risk, fg=risk_color)
+        
+        # Atualizar uptime
         uptime = stats.get("uptime", 0)
         hours = int(uptime // 3600)
         minutes = int((uptime % 3600) // 60)
         seconds = int(uptime % 60)
-        self.uptime_label.config(text=f"{hours:02d}:{minutes:02d}:{seconds:02d}")
+        self.cards["uptime"].config(text=f"{hours:02d}:{minutes:02d}:{seconds:02d}")
         
+        # Atualizar status da defesa
         if self.app.is_defense_active:
-            self.defense_status.config(text="ATIVA", fg='#00ff88')
+            self.defense_status.config(text="DEFESA: ATIVA", fg='#00ff88')
         else:
-            self.defense_status.config(text="Inativa", fg='#ff4444')
-            
+            self.defense_status.config(text="DEFESA: INATIVA", fg='#ff4444')
+        
+        # Atualizar timestamp
+        from datetime import datetime
+        self.last_update.config(text=f"Última atualização: {datetime.now().strftime('%H:%M:%S')}")
+        
     def update_firewall_status(self):
-        """Atualiza o status do firewall verificando diretamente o UFW"""
+        """Atualiza o status do firewall"""
         try:
             result = subprocess.run("sudo ufw status", shell=True, capture_output=True, text=True, timeout=5)
             if "Status: active" in result.stdout or "Estado: ativo" in result.stdout:
-                # Firewall está ATIVO
-                self.firewall_label.config(text="ATIVO", fg='#00ff88')
-                self.fw_status.config(text="ATIVO", fg='#00ff88')
+                self.cards["firewall"].config(text="ATIVO", fg='#00ff88')
             else:
-                # Firewall está INATIVO
-                self.firewall_label.config(text="INATIVO", fg='#ff4444')
-                self.fw_status.config(text="INATIVO", fg='#ff4444')
+                self.cards["firewall"].config(text="INATIVO", fg='#ff4444')
         except Exception as e:
-            self.firewall_label.config(text="ERRO", fg='#ff4444')
-            self.fw_status.config(text="ERRO", fg='#ff4444')
+            self.cards["firewall"].config(text="ERRO", fg='#ff4444')
         
         # Agendar próxima atualização
-        self.after(2000, self.update_firewall_status)
+        self.after(3000, self.update_firewall_status)
+        
+    def update_system_resources(self):
+        """Atualiza CPU e Memória"""
+        try:
+            cpu = psutil.cpu_percent()
+            mem = psutil.virtual_memory().percent
+            
+            # CPU
+            cpu_color = '#00ff88' if cpu < 70 else '#ffaa00' if cpu < 90 else '#ff4444'
+            self.cards["cpu"].config(text=f"{cpu:.1f}%", fg=cpu_color)
+            
+            # Memória
+            mem_color = '#00ff88' if mem < 70 else '#ffaa00' if mem < 90 else '#ff4444'
+            self.cards["memory"].config(text=f"{mem:.1f}%", fg=mem_color)
+            
+        except Exception as e:
+            pass
+        
+        # Agendar próxima atualização
+        self.after(2000, self.update_system_resources)
         
     def start_monitoring(self):
-        def monitor():
-            while True:
-                if self.winfo_exists():
-                    try:
-                        cpu = psutil.cpu_percent()
-                        mem = psutil.virtual_memory().percent
-                        self.cpu_label.config(text=f"{cpu:.1f}%", fg='#00ff88' if cpu < 80 else '#ff4444')
-                        self.mem_label.config(text=f"{mem:.1f}%", fg='#00ff88' if mem < 80 else '#ff4444')
-                    except:
-                        pass
-                time.sleep(2)
-        threading.Thread(target=monitor, daemon=True).start()
+        """Inicia o monitoramento"""
+        self.update_system_resources()

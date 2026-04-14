@@ -21,7 +21,6 @@ from src.gui.threats_tab import ThreatsTab
 from src.gui.firewall_tab import FirewallTab
 from src.gui.counter_tab import CounterTab
 from src.gui.logs_tab import LogsTab
-from src.gui.settings_tab import SettingsTab
 from src.gui.ai_tab import AITab
 
 class MainWindow:
@@ -33,6 +32,12 @@ class MainWindow:
         self.root.minsize(1200, 700)
         
         self.settings = Settings()
+        
+        # Forçar sensibilidade no máximo (100%)
+        self.settings.set("sensitivity", 100)
+        self.settings.set("auto_block", True)
+        self.settings.set("auto_counter", True)
+        
         self.defense_engine = DefenseEngine(self.settings, self.handle_event)
         self.counter_attack = CounterAttack(self.settings, self.handle_event)
         self.is_defense_active = False
@@ -56,7 +61,7 @@ class MainWindow:
                 bg='#0f3460', fg='#00ff88').pack(side='left', padx=30)
         
         # Badge IA
-        tk.Label(header, text="🧠 IA REAL | Isolation Forest + Random Forest", 
+        tk.Label(header, text="🧠 IA REAL | Sensibilidade: MÁXIMA (100%)", 
                 bg='#ff8800', fg='#0a0a1a', font=('Arial', 9, 'bold'), padx=10, pady=3).pack(side='left', padx=10)
         
         # Botão de minimizar para systray
@@ -83,7 +88,7 @@ class MainWindow:
         self.defense_status_label = tk.Label(header, text="DEFESA: INATIVA", bg='#0f3460', fg='#ff4444', font=('Arial', 10, 'bold'))
         self.defense_status_label.pack(side='right', padx=10)
         
-        # Sidebar
+        # Sidebar (sem Configurações)
         sidebar = tk.Frame(self.root, bg='#0f3460', width=220)
         sidebar.pack(side='left', fill='y', padx=10, pady=10)
         sidebar.pack_propagate(False)
@@ -94,8 +99,7 @@ class MainWindow:
             ("🔥 FIREWALL", "firewall"),
             ("⚔️ CONTRA-ATAQUE", "counter"),
             ("🧠 IA", "ai"),
-            ("📝 LOGS", "logs"),
-            ("⚙️ CONFIG", "settings")
+            ("📝 LOGS", "logs")
         ]
         
         self.tab_buttons = {}
@@ -111,19 +115,18 @@ class MainWindow:
         self.content.pack(side='left', fill='both', expand=True, padx=10, pady=10)
         
         # Status bar
-        self.status_bar = tk.Label(self.root, text="✅ Sistema com IA Real | Ative a defesa para começar",
+        self.status_bar = tk.Label(self.root, text="✅ Sistema com IA Real | Sensibilidade: MÁXIMA (100%) | Ative a defesa",
                                    bg='#0f3460', fg='#ccc', anchor='w', font=('Arial', 9))
         self.status_bar.pack(fill='x', side='bottom')
         
-        # Tabs
+        # Tabs (sem Settings)
         self.tabs = {
             "dashboard": DashboardTab(self.content, self),
             "threats": ThreatsTab(self.content, self),
             "firewall": FirewallTab(self.content, self),
             "counter": CounterTab(self.content, self),
             "ai": AITab(self.content, self),
-            "logs": LogsTab(self.content, self),
-            "settings": SettingsTab(self.content, self)
+            "logs": LogsTab(self.content, self)
         }
         
         self.show_tab("dashboard")
@@ -151,7 +154,8 @@ class MainWindow:
             """Sair do aplicativo"""
             if self.is_defense_active:
                 self.defense_engine.stop()
-            self.tray_icon.stop()
+            if self.tray_icon:
+                self.tray_icon.stop()
             self.root.quit()
             os._exit(0)
         
@@ -173,10 +177,9 @@ class MainWindow:
     def minimize_to_tray(self):
         """Minimiza o aplicativo para a bandeja do sistema"""
         if SYSTEM_TRAY_AVAILABLE:
-            self.root.withdraw()  # Esconder a janela
+            self.root.withdraw()
             self.is_minimized = True
             
-            # Iniciar o ícone da bandeja em uma thread separada
             def run_tray():
                 self.tray_icon.run()
             
@@ -186,7 +189,6 @@ class MainWindow:
             
             self.add_log("📌 Aplicativo minimizado para a bandeja do sistema", "info")
         else:
-            # Fallback: minimizar normal
             self.minimize_window()
             self.add_log("⚠️ Systray não disponível. Minimizado normalmente.", "warning")
     
@@ -205,11 +207,9 @@ class MainWindow:
             self.root.quit()
             os._exit(0)
         
-        # Se está na bandeja, só fechar se confirmar
         if self.is_minimized:
             quit_app()
         else:
-            # Mostrar opções ao fechar
             result = tk.messagebox.askyesno(
                 "Sair",
                 "Deseja minimizar para a bandeja ou sair?\n\nSim = Minimizar para bandeja\nNão = Sair do programa"
@@ -220,7 +220,6 @@ class MainWindow:
                 quit_app()
     
     def add_log(self, msg, level="info"):
-        """Adiciona mensagem ao log"""
         if hasattr(self, 'logs_tab'):
             self.logs_tab.add_log(msg, level)
         print(msg)
@@ -231,7 +230,6 @@ class MainWindow:
             self.defense_switch_canvas.itemconfig(self.defense_switch_bg, fill='#00ff88')
             self.defense_switch_canvas.itemconfig(self.defense_switch_text, text="ON", fill='#0a0a1a')
             self.defense_status_label.config(text="DEFESA: ATIVA", fg='#00ff88')
-            # Atualizar ícone da bandeja se disponível
             if self.tray_icon:
                 self.tray_icon.title = "🛡️ DEFESA ATIVA"
         else:
@@ -247,7 +245,7 @@ class MainWindow:
             self.defense_engine.start()
             self.is_defense_active = True
             self.animate_defense_switch(True)
-            self.logs_tab.add_log("🚀 Defesa ATIVADA com IA Real", "success")
+            self.logs_tab.add_log("🚀 Defesa ATIVADA com IA Real (Sensibilidade: 100%)", "success")
         else:
             self.defense_engine.stop()
             self.is_defense_active = False

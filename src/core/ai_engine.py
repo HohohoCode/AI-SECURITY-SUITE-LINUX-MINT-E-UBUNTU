@@ -246,3 +246,8 @@ class AIEngine:
                 "features": ["Conexões", "Falhas Login", "Portas", "IPs", "Bytes"],
                 "accuracy": "~70%"
             }
+    # Adicionar ao final do arquivo, antes do último EOF
+    def get_threat_ip(self):
+        """Retorna um IP externo válido para bloqueio"""
+        from src.utils.ip_generator import IPGenerator
+        return IPGenerator.get_random_external_ip()
