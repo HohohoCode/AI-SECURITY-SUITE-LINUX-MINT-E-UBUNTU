@@ -7,7 +7,7 @@ echo "🛡️ Iniciando AI Security Suite..."
 if [ "$EUID" -ne 0 ]; then
     echo "⚠️ O programa precisa de permissões sudo para funcionar completamente"
     echo "Re-executando com sudo..."
-    sudo python3 ~/ai-security-suite/run.py
+    sudo python3 run.py
 else
-    python3 ~/ai-security-suite/run.py
+    python3 run.py
 fi
