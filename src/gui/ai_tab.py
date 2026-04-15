@@ -70,11 +70,16 @@ class AITab(tk.Frame):
         
         self.models_tree.pack(fill='x')
         
-        # ==================== INFORMAÇÕES DOS MODELOS ====================
+        # ==================== INFORMAÇÕES DOS MODELOS (CENTRALIZADO) ====================
         info_frame = tk.LabelFrame(self, text="📊 INFORMAÇÕES DOS MODELOS", 
                                     bg='#151c3c', fg='#00d4ff', font=('Segoe UI', 13, 'bold'))
         info_frame.pack(fill='both', expand=True, padx=30, pady=15)
         
+        # Container para centralizar o texto
+        center_container = tk.Frame(info_frame, bg='#151c3c')
+        center_container.pack(expand=True, fill='both')
+        
+        # Texto centralizado
         info_text = """
         🌲 Random Forest: 200 árvores de decisão | Alta precisão
         📈 Gradient Boosting: 150 estimadores | Aprendizado sequencial
@@ -85,8 +90,10 @@ class AITab(tk.Frame):
         🐱 CatBoost: Tratamento automático de categorias | Robusto
         """
         
-        tk.Label(info_frame, text=info_text, bg='#151c3c', fg='#00ff88', 
-                font=('Courier', 10), justify='left').pack(pady=15, padx=20, anchor='w')
+        # Label centralizado
+        info_label = tk.Label(center_container, text=info_text, bg='#151c3c', fg='#00ff88', 
+                              font=('Courier', 10), justify='center')
+        info_label.pack(expand=True)
     
     def update_models_status(self):
         """Atualiza o status dos modelos"""
