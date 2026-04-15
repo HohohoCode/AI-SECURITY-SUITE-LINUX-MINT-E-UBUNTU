@@ -9,6 +9,7 @@ import threading
 import time
 import subprocess
 import re
+import os
 from collections import deque
 from datetime import datetime
 from typing import Dict, List
@@ -22,6 +23,14 @@ class BehavioralAnalyzer:
         self.user_profiles = {}
         self.process_history = deque(maxlen=1000)
         self.anomaly_threshold = 0.7
+        
+        # Comandos do próprio sistema de defesa para ignorar
+        self.self_defense_commands = [
+            "pgrep", "ps aux", "ss -tun", "grep", "awk", "tail", "cat",
+            "python3 run.py", "defense_engine", "advanced_ai", "autonomous_agent",
+            "behavioral_analysis", "threat_intel", "honeypot", "proactive_defense",
+            "sudo python3", "ai-security-suite", "run.py", "main_window"
+        ]
         
         # Processos legítimos do sistema (lista expandida)
         self.legitimate_processes = [
@@ -74,16 +83,16 @@ class BehavioralAnalyzer:
             "gsd-rfkill", "gsd-screensaver-proxy", "gsd-sharing", "gsd-smartcard",
             "gsd-sound", "gsd-wacom", "gsd-housekeeping", "gsd-datetime",
             
-            # QtWebEngine (usado por muitos apps)
+            # QtWebEngine
             "QtWebEngineProcess", "QtWebEngineProce", "qwebengine", "webengine",
             
             # Flatpak/Snap
             "flatpak", "flatpak-session-helper", "snapd", "snap-confine",
             
-            # Python (quando não malicioso)
+            # Python
             "python3", "python", "python2", "ipython", "jupyter",
             
-            # Node.js (quando não malicioso)
+            # Node.js
             "node", "npm", "yarn", "pnpm", "bun", "deno",
             
             # Docker/Container
@@ -93,7 +102,7 @@ class BehavioralAnalyzer:
             "qemu", "kvm", "virt-manager", "virtualbox", "vmware", "gnome-boxes"
         ]
         
-        # Padrões MALICIOSOS reais (não falsos positivos)
+        # Padrões MALICIOSOS REAIS (não inclui comandos de verificação)
         self.malicious_patterns = [
             # Reverse shells
             r"nc\s+.*-e\s+/bin/sh", r"nc\s+.*-e\s+/bin/bash",
@@ -105,10 +114,10 @@ class BehavioralAnalyzer:
             r"curl.*\|.*sh", r"wget.*\|.*sh", r"curl.*\|.*bash",
             r"wget.*-O-.*\|.*sh", r"curl.*http.*\|.*python",
             
-            # Ferramentas de hacking
+            # Ferramentas de hacking (execução real, não verificação)
             r"nmap -sS", r"nmap -sC", r"nmap -A", r"masscan", r"zmap",
             r"hydra", r"medusa", r"ncrack", r"thc-hydra", r"john", r"hashcat",
-            r"sqlmap", r"nikto", r"dirb", r"gobuster", r"wfuzz", r"ffuf",
+            r"sqlmap\s+(-u|--url)", r"nikto", r"dirb", r"gobuster", r"wfuzz", r"ffuf",
             r"metasploit", r"msfconsole", r"msfvenom", r"msfrpc",
             r"aircrack-ng", r"reaver", r"bully", r"pixiewps",
             r"ettercap", r"arpspoof", r"driftnet", r"urlsnarf", r"msgsnarf",
@@ -135,9 +144,21 @@ class BehavioralAnalyzer:
         self.is_running = False
         self._log("📊 Análise Comportamental desativada", "warning")
     
+    def _is_self_defense_command(self, process_line):
+        """Verifica se o processo é do próprio sistema de defesa"""
+        process_lower = process_line.lower()
+        for cmd in self.self_defense_commands:
+            if cmd.lower() in process_lower:
+                return True
+        return False
+    
     def _is_legitimate_process(self, process_line):
         """Verifica se o processo é legítimo do sistema"""
         process_lower = process_line.lower()
+        
+        # Primeiro, verificar se é comando do próprio sistema
+        if self._is_self_defense_command(process_line):
+            return True
         
         # Verificar na lista de processos legítimos
         for legit in self.legitimate_processes:
@@ -151,12 +172,14 @@ class BehavioralAnalyzer:
             "/opt/", "/home/", "/usr/share/"
         ]
         
-        # Se o processo está em um caminho legítimo e não tem padrão malicioso
         for path in legitimate_paths:
             if path in process_lower:
-                # Verificar se contém padrão malicioso
+                # Verificar se contém padrão malicioso REAL (não verificação)
                 for pattern in self.malicious_patterns:
                     if re.search(pattern, process_lower):
+                        # Ignorar se for apenas verificação (pgrep, grep, etc)
+                        if "pgrep" in process_lower or "grep" in process_lower:
+                            return True
                         return False
                 return True
         
@@ -175,7 +198,6 @@ class BehavioralAnalyzer:
     def _analyze_user_behavior(self):
         """Analisa comportamento de usuários logados"""
         try:
-            # Obter usuários logados
             result = subprocess.run("who | awk '{print $1}' | sort -u", shell=True, capture_output=True, text=True)
             users = result.stdout.strip().split('\n') if result.stdout else []
             
@@ -183,15 +205,12 @@ class BehavioralAnalyzer:
                 if not user or user == "root":
                     continue
                 
-                # Obter processos do usuário
                 result = subprocess.run(f"ps -u {user} --no-headers | wc -l", shell=True, capture_output=True, text=True)
                 process_count = int(result.stdout.strip()) if result.stdout else 0
                 
-                # Obter conexões de rede do usuário
                 result = subprocess.run(f"ss -tun state established 2>/dev/null | grep -c 'estab'", shell=True, capture_output=True, text=True)
                 connections = int(result.stdout.strip()) if result.stdout else 0
                 
-                # Criar perfil se não existir
                 if user not in self.user_profiles:
                     self.user_profiles[user] = {
                         "process_history": deque(maxlen=50),
@@ -205,7 +224,6 @@ class BehavioralAnalyzer:
                 profile["conn_history"].append(connections)
                 profile["last_seen"] = time.time()
                 
-                # Calcular anomalia
                 if len(profile["process_history"]) > 10:
                     mean_proc = sum(profile["process_history"]) / len(profile["process_history"])
                     std_proc = (sum((x - mean_proc)**2 for x in profile["process_history"]) / len(profile["process_history"])) ** 0.5
@@ -219,12 +237,15 @@ class BehavioralAnalyzer:
     def _analyze_process_behavior(self):
         """Analisa comportamento de processos suspeitos (apenas reais ameaças)"""
         try:
-            # Obter lista de processos
             result = subprocess.run("ps aux", shell=True, capture_output=True, text=True)
-            lines = result.stdout.strip().split('\n')[1:]  # Pular cabeçalho
+            lines = result.stdout.strip().split('\n')[1:]
             
             for line in lines:
                 if not line:
+                    continue
+                
+                # Ignorar processos do próprio sistema de defesa
+                if self._is_self_defense_command(line):
                     continue
                 
                 # Verificar se é processo legítimo
@@ -235,18 +256,17 @@ class BehavioralAnalyzer:
                 line_lower = line.lower()
                 for pattern in self.malicious_patterns:
                     if re.search(pattern, line_lower):
-                        # Extrair PID e comando
                         parts = line.split()
                         if len(parts) >= 11:
                             pid = parts[1]
                             cmd = ' '.join(parts[10:])
-                            self._log(f"🚨 PROCESSO MALICIOSO DETECTADO: PID={pid} CMD={cmd[:100]}", "critical")
+                            self._log(f"🚨 PROCESSO MALICIOSO DETECTADO: PID={pid} CMD={cmd[:150]}", "critical")
                             
                             if self.callback:
                                 self.callback({
                                     "type": "suspicious_process",
                                     "pid": pid,
-                                    "command": cmd[:200],
+                                    "command": cmd[:300],
                                     "pattern": pattern
                                 })
                         break
@@ -256,7 +276,6 @@ class BehavioralAnalyzer:
     def _detect_lateral_movement(self):
         """Detecta movimentação lateral (pivoting)"""
         try:
-            # Verificar conexões SSH para outras máquinas
             result = subprocess.run("ss -tun state established 2>/dev/null | grep ':22 ' | awk '{print $5}'", 
                                    shell=True, capture_output=True, text=True)
             if result.stdout:
@@ -264,7 +283,6 @@ class BehavioralAnalyzer:
                 for conn in connections:
                     if conn and ':' in conn:
                         ip = conn.split(':')[0]
-                        # Ignorar IPs locais
                         if not ip.startswith(('10.', '192.168.', '172.', '127.')) and ip != "0.0.0.0":
                             self._log(f"🔄 Conexão SSH externa detectada para {ip}", "alert")
         except:
