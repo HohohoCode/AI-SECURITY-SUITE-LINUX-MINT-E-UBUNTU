@@ -116,8 +116,13 @@ class MainWindow:
             self.logs_tab.add_log(event.get("message", ""), event.get("level", "info"))
         elif event.get("type") == "counter_attack":
             self.counter_tab.add_attack_event(event)
+        elif event.get("type") == "stats_update":
+            self.dashboard_tab.update_stats(event.get("stats", {}))
         elif "source_ip" in event:
             self.threats_tab.add_threat(event)
+            # Atualizar dashboard também quando houver nova ameaça
+            if self.defense_engine:
+                self.dashboard_tab.update_stats(self.defense_engine.get_stats())
             
     def start_updates(self):
         def update():

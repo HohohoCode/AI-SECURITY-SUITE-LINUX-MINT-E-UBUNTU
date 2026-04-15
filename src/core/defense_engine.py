@@ -59,8 +59,6 @@ class DefenseEngine:
         self.is_active = True
         self.stats["start_time"] = time.time()
         self._log("🚀 DEFESA TOTAL ATIVADA!", "success")
-        self._log("🧠 IA Ultra-Avançada | 🤖 Agente Autônomo | 🍯 Honeypot", "info")
-        self._log("🕵️ Threat Intelligence | 📊 Behavioral Analysis | 🛡️ Proactive Defense", "info")
         
         # Iniciar todos os módulos
         self.autonomous_agent = AutonomousDefenseAgent(self, self.callback)
@@ -107,6 +105,10 @@ class DefenseEngine:
             
             self._ai_analysis()
             self._check_auth_logs()
+            
+            # Garantir que o callback seja chamado para atualizar a GUI
+            if self.callback:
+                self.callback({"type": "stats_update", "stats": self.stats})
     
     def _update_connections(self):
         try:
