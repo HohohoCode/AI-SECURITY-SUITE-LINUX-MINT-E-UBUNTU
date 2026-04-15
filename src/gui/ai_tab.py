@@ -164,12 +164,12 @@ class AITab(tk.Frame):
                                                     font=('Arial', 14, 'bold'))
             self.thresholds_labels[key].pack(pady=(0,5))
         
-        # ==================== SEÇÃO 3: ANÁLISE EM TEMPO REAL (MAIOR AINDA) ====================
+        # ==================== SEÇÃO 3: ANÁLISE EM TEMPO REAL ====================
         realtime_frame = tk.LabelFrame(self.inner_frame, text="📈 ANÁLISE EM TEMPO REAL", 
                                         bg='#16213e', fg='#00ff88', font=('Arial', 14, 'bold'))
         realtime_frame.pack(fill='both', expand=True, padx=30, pady=15)
         
-        # Texto MAIOR para análise em tempo real
+        # Texto para análise em tempo real
         self.realtime_text = tk.Text(realtime_frame, bg='#0a0a1a', fg='#00ff88', 
                                       font=('Courier', 11), height=50, wrap='word')
         self.realtime_text.pack(fill='both', expand=True, padx=15, pady=15)

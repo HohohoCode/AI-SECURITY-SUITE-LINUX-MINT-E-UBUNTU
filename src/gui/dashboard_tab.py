@@ -56,10 +56,10 @@ class DashboardTab(tk.Frame):
             card.grid(row=row, column=col, padx=8, pady=8, sticky='nsew')
             
             # Ícone e título
-            title_frame = tk.Frame(card, bg='#16213e')
-            title_frame.pack(fill='x', pady=(12, 5))
-            tk.Label(title_frame, text=icon, bg='#16213e', fg=color, font=('Arial', 20)).pack(side='left', padx=(15, 5))
-            tk.Label(title_frame, text=title, bg='#16213e', fg='#ccc', font=('Arial', 10, 'bold')).pack(side='left')
+            title_frame_card = tk.Frame(card, bg='#16213e')
+            title_frame_card.pack(fill='x', pady=(12, 5))
+            tk.Label(title_frame_card, text=icon, bg='#16213e', fg=color, font=('Arial', 20)).pack(side='left', padx=(15, 5))
+            tk.Label(title_frame_card, text=title, bg='#16213e', fg='#ccc', font=('Arial', 10, 'bold')).pack(side='left')
             
             # Valor
             if key == "firewall":
@@ -78,8 +78,8 @@ class DashboardTab(tk.Frame):
         tk.Label(status_bar, text="🟢 STATUS DO SISTEMA", font=('Arial', 10, 'bold'),
                 bg='#16213e', fg='#00ff88').pack(side='left', padx=15, pady=8)
         
-        self.defense_status = tk.Label(status_bar, text="DEFESA: INATIVA", 
-                                       bg='#16213e', fg='#ff4444', font=('Arial', 9, 'bold'))
+        self.defense_status = tk.Label(status_bar, text="DEFESA: ATIVA", 
+                                       bg='#16213e', fg='#00ff88', font=('Arial', 9, 'bold'))
         self.defense_status.pack(side='left', padx=15)
         
         self.last_update = tk.Label(status_bar, text="Última atualização: --:--:--", 
