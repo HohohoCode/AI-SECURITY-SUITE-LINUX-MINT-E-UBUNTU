@@ -2,15 +2,9 @@ import tkinter as tk
 import threading
 import time
 import subprocess
+import sys
+import os
 from datetime import datetime
-
-# Tentar importar system tray
-try:
-    import pystray
-    from PIL import Image, ImageDraw
-    SYSTEM_TRAY_AVAILABLE = True
-except ImportError:
-    SYSTEM_TRAY_AVAILABLE = False
 
 from src.config.settings import Settings
 from src.core.defense_engine import DefenseEngine
@@ -25,8 +19,6 @@ from src.gui.connections_tab import ConnectionsTab
 
 class MainWindow:
     def __init__(self):
-        # Configurar ambiente
-        import os
         os.environ['GDK_BACKEND'] = 'x11'
         os.environ['NO_AT_BRIDGE'] = '1'
         
@@ -40,72 +32,25 @@ class MainWindow:
         self.defense_engine = DefenseEngine(self.settings, self.handle_event)
         self.counter_attack = CounterAttack(self.settings, self.handle_event)
         
-        self.tray_icon = None
-        self.is_minimized = False
-        
         self.setup_ui()
         self.start_updates()
         self.check_firewall_status()
-        self.setup_system_tray()
         
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
     
-    def setup_system_tray(self):
-        if not SYSTEM_TRAY_AVAILABLE:
-            return
-        
-        def create_tray_image():
-            width = 64
-            height = 64
-            image = Image.new('RGB', (width, height), '#0f3460')
-            draw = ImageDraw.Draw(image)
-            draw.rectangle([10, 10, 54, 54], outline='#00d4ff', width=3)
-            draw.ellipse([20, 20, 44, 44], outline='#00d4ff', width=2)
-            return image
-        
-        def on_quit():
-            if self.defense_engine:
-                self.defense_engine.stop()
-            if self.tray_icon:
-                self.tray_icon.stop()
-            self.root.quit()
-            import os
-            os._exit(0)
-        
-        def show_window():
-            self.root.deiconify()
-            self.root.lift()
-            self.is_minimized = False
-        
-        def hide_window():
-            self.root.withdraw()
-            self.is_minimized = True
-        
-        menu = pystray.Menu(
-            pystray.MenuItem("🛡️ AI Security Suite", show_window, default=True),
-            pystray.MenuItem("📊 Mostrar Janela", show_window),
-            pystray.MenuItem("🗑️ Minimizar para Bandeja", hide_window),
-            pystray.MenuItem("🚪 Sair", on_quit)
-        )
-        
-        self.tray_icon = pystray.Icon("ai_security", create_tray_image(), "AI Security Suite", menu)
-        
-        def run_tray():
-            self.tray_icon.run()
-        
-        self.tray_thread = threading.Thread(target=run_tray, daemon=True)
-        self.tray_thread.start()
-    
     def on_closing(self):
-        if SYSTEM_TRAY_AVAILABLE:
-            self.root.withdraw()
-            self.is_minimized = True
-        else:
-            import tkinter.messagebox as mb
-            if mb.askyesno("Sair", "Deseja realmente sair?"):
-                if self.defense_engine:
-                    self.defense_engine.stop()
-                self.root.quit()
+        """Fechar o programa usando o mesmo método do stop.sh"""
+        resposta = tk.messagebox.askyesno("Sair", "Deseja realmente sair do programa?")
+        if resposta:
+            print("🛑 Encerrando programa...")
+            # Usar o mesmo comando do stop.sh
+            os.system("sudo pkill -f 'python3.*run.py'")
+            os.system("sudo pkill -f 'run.py'")
+            # Fechar a janela
+            self.root.quit()
+            self.root.destroy()
+            # Forçar saída
+            os._exit(0)
     
     def check_firewall_status(self):
         try:
@@ -131,12 +76,6 @@ class MainWindow:
                 bg='#0f1535', fg='#ffffff').pack(side='left', padx=10)
         tk.Label(title_frame, text="PRO", font=('Segoe UI', 10, 'bold'),
                 bg='#00d4ff', fg='#0a0e27', padx=6, pady=2).pack(side='left')
-        
-        if SYSTEM_TRAY_AVAILABLE:
-            tray_btn = tk.Button(header, text="📌", command=self.minimize_to_tray,
-                                 bg='#0f1535', fg='#00d4ff', font=('Segoe UI', 12),
-                                 padx=10, pady=5, cursor='hand2', relief='flat')
-            tray_btn.pack(side='right', padx=10)
         
         # Sidebar
         sidebar = tk.Frame(self.root, bg='#0f1535', width=240)
@@ -191,12 +130,6 @@ class MainWindow:
         }
         
         self.show_tab("dashboard")
-    
-    def minimize_to_tray(self):
-        self.root.withdraw()
-        self.is_minimized = True
-        self.status_text.config(text="📌 Aplicativo minimizado para bandeja")
-        self.root.after(3000, lambda: self.status_text.config(text="✅ SISTEMA OPERACIONAL | IA ATIVA | MONITORANDO"))
     
     def update_clock(self):
         from datetime import datetime
