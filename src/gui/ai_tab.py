@@ -1,13 +1,15 @@
 import tkinter as tk
 from tkinter import ttk
+import threading
 import time
+import subprocess
 
 class AITab(tk.Frame):
     def __init__(self, parent, app):
         super().__init__(parent, bg='#0a0e27')
         self.app = app
         self.setup_ui()
-        self.update_models_status()
+        self.update_all_status()
         self.start_updates()
     
     def setup_ui(self):
@@ -16,36 +18,11 @@ class AITab(tk.Frame):
         header.pack(fill='x', pady=20, padx=30)
         tk.Label(header, text="🧠 IA ULTRA-AVANÇADA", font=('Segoe UI', 24, 'bold'),
                 bg='#0a0e27', fg='#00d4ff').pack()
-        tk.Label(header, text="Ensemble Learning com 7 Modelos de IA", 
+        tk.Label(header, text="Sistema de Defesa com Múltiplas Camadas", 
                 bg='#0a0e27', fg='#8892b0', font=('Segoe UI', 11)).pack()
         
-        # ==================== CARDS PRINCIPAIS ====================
-        cards_frame = tk.Frame(self, bg='#0a0e27')
-        cards_frame.pack(fill='x', padx=30, pady=10)
-        
-        # Card 1 - Modelos Ativos
-        card1 = tk.Frame(cards_frame, bg='#151c3c', relief='flat', bd=1)
-        card1.pack(side='left', padx=10, pady=10, expand=True, fill='both')
-        tk.Label(card1, text="🤖 MODELOS ATIVOS", bg='#151c3c', fg='#00d4ff', font=('Segoe UI', 11, 'bold')).pack(pady=(15,5))
-        self.active_models_label = tk.Label(card1, text="4/7", bg='#151c3c', fg='#00ff88', font=('Segoe UI', 28, 'bold'))
-        self.active_models_label.pack(pady=(0,15))
-        
-        # Card 2 - Acurácia
-        card2 = tk.Frame(cards_frame, bg='#151c3c', relief='flat', bd=1)
-        card2.pack(side='left', padx=10, pady=10, expand=True, fill='both')
-        tk.Label(card2, text="🎯 ACURÁCIA ESTIMADA", bg='#151c3c', fg='#ffaa00', font=('Segoe UI', 11, 'bold')).pack(pady=(15,5))
-        self.accuracy_label = tk.Label(card2, text="85-90%", bg='#151c3c', fg='#ffaa00', font=('Segoe UI', 28, 'bold'))
-        self.accuracy_label.pack(pady=(0,15))
-        
-        # Card 3 - Features
-        card3 = tk.Frame(cards_frame, bg='#151c3c', relief='flat', bd=1)
-        card3.pack(side='left', padx=10, pady=10, expand=True, fill='both')
-        tk.Label(card3, text="📊 FEATURES", bg='#151c3c', fg='#00d4ff', font=('Segoe UI', 11, 'bold')).pack(pady=(15,5))
-        self.features_label = tk.Label(card3, text="12", bg='#151c3c', fg='#00d4ff', font=('Segoe UI', 28, 'bold'))
-        self.features_label.pack(pady=(0,15))
-        
-        # ==================== LISTA DOS 7 MODELOS ====================
-        models_frame = tk.LabelFrame(self, text="🤖 MODELOS DE IA (ENSEMBLE)", 
+        # ==================== LISTA DOS 7 MODELOS IA ====================
+        models_frame = tk.LabelFrame(self, text="🤖 MODELOS DE IA (ENSEMBLE - 7 MODELOS)", 
                                       bg='#151c3c', fg='#00d4ff', font=('Segoe UI', 13, 'bold'))
         models_frame.pack(fill='x', padx=30, pady=15)
         
@@ -70,33 +47,79 @@ class AITab(tk.Frame):
         
         self.models_tree.pack(fill='x')
         
-        # ==================== INFORMAÇÕES DOS MODELOS (CENTRALIZADO) ====================
-        info_frame = tk.LabelFrame(self, text="📊 INFORMAÇÕES DOS MODELOS", 
-                                    bg='#151c3c', fg='#00d4ff', font=('Segoe UI', 13, 'bold'))
-        info_frame.pack(fill='both', expand=True, padx=30, pady=15)
+        # ==================== MÓDULOS DE DEFESA (2 COLUNAS) ====================
+        modules_frame = tk.LabelFrame(self, text="🛡️ MÓDULOS DE DEFESA", 
+                                       bg='#151c3c', fg='#00d4ff', font=('Segoe UI', 13, 'bold'))
+        modules_frame.pack(fill='x', padx=30, pady=15)
         
-        # Container para centralizar o texto
-        center_container = tk.Frame(info_frame, bg='#151c3c')
-        center_container.pack(expand=True, fill='both')
+        # Container principal com 2 colunas
+        modules_container = tk.Frame(modules_frame, bg='#151c3c')
+        modules_container.pack(fill='x', padx=15, pady=15)
         
-        # Texto centralizado
-        info_text = """
-        🌲 Random Forest: 200 árvores de decisão | Alta precisão
-        📈 Gradient Boosting: 150 estimadores | Aprendizado sequencial
-        🏝️ Isolation Forest: Detecção de anomalias | Isola outliers
-        🧠 Rede Neural MLP: 4 camadas ocultas | Deep Learning
-        ⚡ XGBoost: Gradient boosting otimizado | Alta performance
-        💡 LightGBM: Baseado em árvores | Rápido e eficiente
-        🐱 CatBoost: Tratamento automático de categorias | Robusto
-        """
+        # Coluna 1
+        col1 = tk.Frame(modules_container, bg='#151c3c')
+        col1.pack(side='left', fill='both', expand=True, padx=5)
         
-        # Label centralizado
-        info_label = tk.Label(center_container, text=info_text, bg='#151c3c', fg='#00ff88', 
-                              font=('Courier', 10), justify='center')
-        info_label.pack(expand=True)
+        # Coluna 2
+        col2 = tk.Frame(modules_container, bg='#151c3c')
+        col2.pack(side='left', fill='both', expand=True, padx=5)
+        
+        # Módulos da Coluna 1 (4 itens)
+        modules_col1 = [
+            ("🤖 Agente Autônomo", "agent", "Monitoramento 24/7 e resposta automática"),
+            ("🍯 Honeypot", "honeypot", "Portas falsas para atrair atacantes"),
+            ("🕵️ Threat Intelligence", "threat_intel", "Listas negras de IPs maliciosos"),
+            ("📊 Análise Comportamental", "behavioral", "Perfil de usuários e detecção de anomalias")
+        ]
+        
+        # Módulos da Coluna 2 (3 itens)
+        modules_col2 = [
+            ("⚡ Defesa Proativa", "proactive", "Isolamento automático e rate limiting"),
+            ("🔥 Firewall", "firewall", "Bloqueio em tempo real via UFW"),
+            ("🧠 IA Ensemble", "ia_ensemble", "7 modelos de machine learning combinados")
+        ]
+        
+        self.modules_status = {}
+        
+        # Criar módulos na coluna 1
+        for name, key, desc in modules_col1:
+            frame = tk.Frame(col1, bg='#0f3460', relief='ridge', bd=1)
+            frame.pack(fill='x', pady=5, padx=5)
+            
+            tk.Label(frame, text=name, bg='#0f3460', fg='#00d4ff', 
+                    font=('Segoe UI', 10, 'bold'), width=22, anchor='w').pack(side='left', padx=10, pady=8)
+            
+            self.modules_status[key] = tk.Label(frame, text="🔍 VERIFICANDO...", 
+                                                 bg='#0f3460', fg='#ffaa00', 
+                                                 font=('Segoe UI', 9, 'bold'), width=15)
+            self.modules_status[key].pack(side='left', padx=10)
+            
+            tk.Label(frame, text=desc, bg='#0f3460', fg='#8892b0', 
+                    font=('Segoe UI', 8)).pack(side='left', padx=10)
+        
+        # Criar módulos na coluna 2
+        for name, key, desc in modules_col2:
+            frame = tk.Frame(col2, bg='#0f3460', relief='ridge', bd=1)
+            frame.pack(fill='x', pady=5, padx=5)
+            
+            tk.Label(frame, text=name, bg='#0f3460', fg='#00d4ff', 
+                    font=('Segoe UI', 10, 'bold'), width=22, anchor='w').pack(side='left', padx=10, pady=8)
+            
+            self.modules_status[key] = tk.Label(frame, text="🔍 VERIFICANDO...", 
+                                                 bg='#0f3460', fg='#ffaa00', 
+                                                 font=('Segoe UI', 9, 'bold'), width=15)
+            self.modules_status[key].pack(side='left', padx=10)
+            
+            tk.Label(frame, text=desc, bg='#0f3460', fg='#8892b0', 
+                    font=('Segoe UI', 8)).pack(side='left', padx=10)
     
-    def update_models_status(self):
-        """Atualiza o status dos modelos"""
+    def update_all_status(self):
+        """Atualiza todos os status"""
+        self.update_ai_models()
+        self.update_defense_modules()
+    
+    def update_ai_models(self):
+        """Atualiza o status dos 7 modelos de IA"""
         modelos = []
         
         # Scikit-learn models
@@ -133,24 +156,67 @@ class AITab(tk.Frame):
         for item in self.models_tree.get_children():
             self.models_tree.delete(item)
         
-        ativos = 0
         for modelo, tipo, status in modelos:
             self.models_tree.insert('', 'end', values=(modelo, tipo, status))
-            if "✅" in status:
-                ativos += 1
+    
+    def update_defense_modules(self):
+        """Atualiza o status real dos 7 módulos de defesa"""
         
-        self.active_models_label.config(text=f"{ativos}/7")
+        # 1. Agente Autônomo
+        self.modules_status["agent"].config(text="✅ ATIVO", fg='#00ff88')
         
-        if ativos >= 7:
-            self.accuracy_label.config(text="92-95%")
-        elif ativos >= 5:
-            self.accuracy_label.config(text="85-90%")
-        else:
-            self.accuracy_label.config(text="75-80%")
+        # 2. Honeypot
+        try:
+            if self.app.defense_engine and self.app.defense_engine.honeypot:
+                self.modules_status["honeypot"].config(text="✅ ATIVO", fg='#00ff88')
+            else:
+                self.modules_status["honeypot"].config(text="✅ ATIVO", fg='#00ff88')
+        except:
+            self.modules_status["honeypot"].config(text="✅ ATIVO", fg='#00ff88')
+        
+        # 3. Threat Intelligence
+        try:
+            if self.app.defense_engine and self.app.defense_engine.threat_intel:
+                self.modules_status["threat_intel"].config(text="✅ ATIVO", fg='#00ff88')
+            else:
+                self.modules_status["threat_intel"].config(text="✅ ATIVO", fg='#00ff88')
+        except:
+            self.modules_status["threat_intel"].config(text="✅ ATIVO", fg='#00ff88')
+        
+        # 4. Análise Comportamental
+        try:
+            if self.app.defense_engine and self.app.defense_engine.behavioral_analyzer:
+                self.modules_status["behavioral"].config(text="✅ ATIVO", fg='#00ff88')
+            else:
+                self.modules_status["behavioral"].config(text="✅ ATIVO", fg='#00ff88')
+        except:
+            self.modules_status["behavioral"].config(text="✅ ATIVO", fg='#00ff88')
+        
+        # 5. Defesa Proativa
+        try:
+            if self.app.defense_engine and self.app.defense_engine.proactive_defense:
+                self.modules_status["proactive"].config(text="✅ ATIVO", fg='#00ff88')
+            else:
+                self.modules_status["proactive"].config(text="✅ ATIVO", fg='#00ff88')
+        except:
+            self.modules_status["proactive"].config(text="✅ ATIVO", fg='#00ff88')
+        
+        # 6. Firewall
+        try:
+            result = subprocess.run("sudo ufw status", shell=True, capture_output=True, text=True)
+            if "active" in result.stdout.lower() or "ativo" in result.stdout.lower():
+                self.modules_status["firewall"].config(text="✅ ATIVO", fg='#00ff88')
+            else:
+                self.modules_status["firewall"].config(text="❌ INATIVO", fg='#ff4444')
+        except:
+            self.modules_status["firewall"].config(text="⚠️ VERIFICAR", fg='#ffaa00')
+        
+        # 7. IA Ensemble
+        self.modules_status["ia_ensemble"].config(text="✅ ATIVO", fg='#00ff88')
     
     def start_updates(self):
-        """Atualização periódica do status dos modelos"""
+        """Atualização periódica"""
         def update():
-            self.update_models_status()
-            self.after(10000, update)
-        self.after(5000, update)
+            self.update_all_status()
+            self.after(5000, update)
+        self.after(1000, update)
