@@ -38,6 +38,8 @@ class AIEngine:
         self.callback = callback
         self.models = []
         self.model_names = []
+        self.last_bruteforce_count = 0
+        self.last_connections = 0
         
         self._init_models()
         
@@ -83,7 +85,7 @@ class AIEngine:
             except:
                 pass
         
-        # Treinar modelos rapidamente
+        # Treinar rapidamente
         X = [[i, i%10, i%5] for i in range(50)]
         y = [i%3 for i in range(50)]
         for model in self.models:
@@ -93,75 +95,49 @@ class AIEngine:
                 pass
     
     def _extract_ip_from_line(self, line):
-        """Extrai IP válido de uma linha de texto"""
         ip_pattern = r'\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b'
         ips = re.findall(ip_pattern, line)
         for ip in ips:
             parts = ip.split('.')
             if all(0 <= int(p) <= 255 for p in parts):
-                if not ip.startswith(('127.', '10.', '192.168.', '172.16.', '172.17.', '172.18.', '172.19.',
-                                     '172.20.', '172.21.', '172.22.', '172.23.', '172.24.', '172.25.',
-                                     '172.26.', '172.27.', '172.28.', '172.29.', '172.30.', '172.31.')):
+                if not ip.startswith(('127.', '10.', '192.168.', '172.')):
                     return ip
         return None
     
     def _real_monitor(self):
-        """Monitoramento REAL do sistema"""
+        """Monitoramento com intervalos maiores"""
         while self.is_running:
             try:
                 self._detect_bruteforce()
                 self._detect_ddos()
-                self._detect_port_scan()
-                time.sleep(5)
+                time.sleep(10)  # Intervalo maior (antes era 5)
             except:
-                pass
+                time.sleep(10)
     
     def _detect_bruteforce(self):
-        """Detecta força bruta REAL via logs"""
         try:
-            result = subprocess.run("sudo tail -100 /var/log/auth.log 2>/dev/null | grep 'Failed password'",
+            result = subprocess.run("sudo tail -50 /var/log/auth.log 2>/dev/null | grep -c 'Failed password'",
                                    shell=True, capture_output=True, text=True, timeout=5)
             if result.stdout:
-                lines = result.stdout.strip().split('\n')
-                ip_count = {}
-                for line in lines:
-                    ip = self._extract_ip_from_line(line)
-                    if ip:
-                        ip_count[ip] = ip_count.get(ip, 0) + 1
-                
-                for ip, count in ip_count.items():
-                    if count >= 5:
-                        self._report_threat("BRUTE_FORCE", ip, f"{count} tentativas de login falhas", 90)
+                count = int(result.stdout.strip())
+                if count > self.last_bruteforce_count and count > 5:
+                    ip_result = subprocess.run("sudo tail -50 /var/log/auth.log 2>/dev/null | grep 'Failed password' | tail -1 | grep -oP 'from \\K[0-9.]+'",
+                                              shell=True, capture_output=True, text=True)
+                    ip = ip_result.stdout.strip() if ip_result.stdout else "desconhecido"
+                    self._report_threat("BRUTE_FORCE", ip, f"{count} tentativas de login falhas", 90)
+                self.last_bruteforce_count = count
         except:
             pass
     
     def _detect_ddos(self):
-        """Detecta DDoS REAL por volume de conexões"""
         try:
-            result = subprocess.run("ss -tun state established 2>/dev/null | awk '{print $5}' | cut -d: -f1 | sort | uniq -c | sort -rn | head -1",
+            result = subprocess.run("ss -tun state established 2>/dev/null | wc -l",
                                    shell=True, capture_output=True, text=True, timeout=5)
             if result.stdout:
-                parts = result.stdout.strip().split()
-                if len(parts) >= 2:
-                    count = int(parts[0])
-                    ip = self._extract_ip_from_line(result.stdout)
-                    if ip and count > 50:
-                        self._report_threat("DDoS", ip, f"{count} conexões simultâneas", 95)
-        except:
-            pass
-    
-    def _detect_port_scan(self):
-        """Detecta varredura de portas REAL"""
-        try:
-            result = subprocess.run("ss -tun state established 2>/dev/null | awk '{print $5}' | cut -d: -f1 | sort | uniq -c | sort -rn | head -1",
-                                   shell=True, capture_output=True, text=True, timeout=5)
-            if result.stdout:
-                parts = result.stdout.strip().split()
-                if len(parts) >= 2:
-                    count = int(parts[0])
-                    ip = self._extract_ip_from_line(result.stdout)
-                    if ip and count > 20:
-                        self._report_threat("PORT_SCAN", ip, f"Escaneando portas: {count} conexões", 85)
+                connections = int(result.stdout.strip())
+                if connections > 200 and connections > self.last_connections + 50:
+                    self._report_threat("DDoS", "rede local", f"Alto volume: {connections} conexões", 85)
+                self.last_connections = connections
         except:
             pass
     
@@ -176,7 +152,6 @@ class AIEngine:
             "timestamp": time.time(),
             "level": "CRITICAL" if t_type in ["DDoS"] else "HIGH"
         }
-        print(f"🚨 {t_type} detectado de {source}")
         if self.callback:
             self.callback({"type": "threat", "threat": threat})
     

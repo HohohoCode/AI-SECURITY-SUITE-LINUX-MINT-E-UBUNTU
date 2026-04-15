@@ -165,3 +165,11 @@ class MainWindow:
     
     def run(self):
         self.root.mainloop()
+    def start_updates(self):
+        def update_sidebar():
+            if self.defense_engine:
+                stats = self.defense_engine.get_stats()
+                self.dashboard_tab.update_stats_from_engine()
+            self.root.after(5000, update_sidebar)  # Aumentado para 5 segundos (antes 2)
+        
+        update_sidebar()

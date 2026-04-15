@@ -13,68 +13,79 @@ class DefenseEngine:
         self.callback = callback
         self.is_active = True
         
+        # Limitar tamanho do histórico
         self.threats = []
         self.blocked_ips = set()
         self.counter_attacks = []
+        self.max_history = 100  # Limite de histórico
         
         self.stats = {
             "threats_detected": 0,
             "threats_blocked": 0,
             "packets_analyzed": 0,
             "start_time": time.time(),
-            "active_connections": 0,
-            "last_packet_count": 0
+            "active_connections": 0
         }
         
         self.ai_engine = AIEngine(self._handle_ai_event)
         self._activate_firewall()
         
-        # Iniciar monitoramento de pacotes
-        self.packet_counter = 0
+        # Monitoramento com intervalo maior
         self.monitor_thread = threading.Thread(target=self._monitor_packets, daemon=True)
         self.monitor_thread.start()
         
         self._log("🛡️ Defesa TOTAL ativada", "success")
     
     def _monitor_packets(self):
-        """Monitora pacotes de rede em tempo real"""
+        """Monitora pacotes com intervalo maior"""
         last_rx = 0
         last_tx = 0
+        counter = 0
         
         while self.is_active:
             try:
-                # Ler estatísticas de rede da interface ativa
+                # Atualizar a cada 10 segundos (antes era 5)
                 result = subprocess.run("cat /proc/net/dev | grep -E 'eth0|wlan0|enp|wl' | head -1", 
-                                       shell=True, capture_output=True, text=True)
+                                       shell=True, capture_output=True, text=True, timeout=3)
                 if result.stdout:
-                    # Extrair bytes recebidos e transmitidos
                     parts = result.stdout.strip().split()
                     if len(parts) >= 10:
-                        rx_bytes = int(parts[1])  # bytes recebidos
-                        tx_bytes = int(parts[9])  # bytes transmitidos
+                        rx_bytes = int(parts[1])
+                        tx_bytes = int(parts[9])
                         
-                        # Calcular pacotes (aproximadamente 1 pacote = 1500 bytes)
                         if last_rx > 0:
                             rx_packets = (rx_bytes - last_rx) // 1500
                             tx_packets = (tx_bytes - last_tx) // 1500
-                            self.packet_counter += max(0, rx_packets + tx_packets)
-                            
-                            # Atualizar estatísticas a cada 10 segundos
-                            self.stats["packets_analyzed"] = self.packet_counter
+                            self.stats["packets_analyzed"] += max(0, rx_packets + tx_packets)
                         
                         last_rx = rx_bytes
                         last_tx = tx_bytes
                 
-                # Também contar conexões como pacotes
+                # Atualizar conexões a cada 10 segundos
                 result = subprocess.run("ss -tun state established 2>/dev/null | wc -l",
-                                       shell=True, capture_output=True, text=True)
+                                       shell=True, capture_output=True, text=True, timeout=3)
                 if result.stdout:
                     conn_count = int(result.stdout.strip())
                     self.stats["active_connections"] = max(0, conn_count - 1)
                 
-                time.sleep(5)
-            except:
-                pass
+                # Pequena pausa para não sobrecarregar
+                time.sleep(10)
+                
+                # Limpar histórico antigo a cada 10 minutos
+                counter += 1
+                if counter >= 60:  # ~10 minutos
+                    self._cleanup_history()
+                    counter = 0
+                    
+            except Exception as e:
+                time.sleep(10)
+    
+    def _cleanup_history(self):
+        """Limpa histórico antigo para evitar memória excessiva"""
+        if len(self.threats) > self.max_history:
+            self.threats = self.threats[:self.max_history]
+        if len(self.counter_attacks) > self.max_history:
+            self.counter_attacks = self.counter_attacks[:self.max_history]
     
     def _activate_firewall(self):
         try:
@@ -141,6 +152,10 @@ class DefenseEngine:
         }
         self.counter_attacks.insert(0, counter)
         
+        # Limitar histórico
+        if len(self.counter_attacks) > self.max_history:
+            self.counter_attacks = self.counter_attacks[:self.max_history]
+        
         if self.callback:
             self.callback({"type": "counter_attack", **counter})
     
@@ -149,14 +164,6 @@ class DefenseEngine:
             self.callback({"type": "log", "message": f"[{time.strftime('%H:%M:%S')}] {msg}", "level": level})
     
     def get_stats(self):
-        # Atualizar conexões
-        try:
-            result = subprocess.run("ss -tun state established 2>/dev/null | wc -l", shell=True, capture_output=True, text=True)
-            if result.stdout:
-                self.stats["active_connections"] = max(0, int(result.stdout.strip()) - 1)
-        except:
-            pass
-        
         self.stats["uptime"] = time.time() - self.stats["start_time"]
         return self.stats
     

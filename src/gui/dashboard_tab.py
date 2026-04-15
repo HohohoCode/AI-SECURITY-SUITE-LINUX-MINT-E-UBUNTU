@@ -145,3 +145,7 @@ class DashboardTab(tk.Frame):
     def start_monitoring(self):
         self.update_system_resources()
         self.update_connections()
+    def start_monitoring(self):
+        # Aumentar intervalos de atualização
+        self.update_system_resources()  # já tem after(2000)
+        self.update_connections()  # já tem after(3000)
