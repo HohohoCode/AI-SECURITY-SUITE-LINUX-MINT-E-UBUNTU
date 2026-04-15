@@ -13,12 +13,13 @@ from src.gui.firewall_tab import FirewallTab
 from src.gui.counter_tab import CounterTab
 from src.gui.logs_tab import LogsTab
 from src.gui.ai_tab import AITab
+from src.gui.advanced_dashboard import AdvancedDashboard
 
 class MainWindow:
     def __init__(self):
         self.root = tk.Tk()
-        self.root.title("🛡️ AI Security Suite - IA Real")
-        self.root.geometry("1400x850")
+        self.root.title("🛡️ AI Security Suite Pro - Defesa Total")
+        self.root.geometry("1400x900")
         self.root.configure(bg='#0a0a1a')
         self.root.minsize(1200, 700)
         
@@ -50,16 +51,16 @@ class MainWindow:
         header.pack(fill='x')
         header.pack_propagate(False)
         
-        tk.Label(header, text="🛡️ AI SECURITY SUITE", font=('Arial', 20, 'bold'),
+        tk.Label(header, text="🛡️ AI SECURITY SUITE PRO", font=('Arial', 20, 'bold'),
                 bg='#0f3460', fg='#00ff88').pack(side='left', padx=30)
         
-        tk.Label(header, text="✅ DEFESA ATIVA | FIREWALL ATIVO | IA REAL 100%", 
+        tk.Label(header, text="✅ DEFESA TOTAL | 7 CAMADAS | IA AVANÇADA", 
                 bg='#00ff88', fg='#0a0a1a', font=('Arial', 10, 'bold'), padx=15, pady=5).pack(side='left', padx=20)
         
         tk.Label(header, text="🛡️", font=('Arial', 24),
                 bg='#0f3460', fg='#00ff88').pack(side='right', padx=30)
         
-        sidebar = tk.Frame(self.root, bg='#0f3460', width=220)
+        sidebar = tk.Frame(self.root, bg='#0f3460', width=240)
         sidebar.pack(side='left', fill='y', padx=10, pady=10)
         sidebar.pack_propagate(False)
         
@@ -68,6 +69,7 @@ class MainWindow:
             ("⚠️ AMEAÇAS", "threats"),
             ("🚫 IPs BLOQUEADOS", "firewall"),
             ("⚔️ CONTRA-ATAQUE", "counter"),
+            ("📈 DASHBOARD AVANÇADO", "adv_dashboard"),
             ("🧠 IA", "ai"),
             ("📝 LOGS", "logs")
         ]
@@ -83,8 +85,8 @@ class MainWindow:
         self.content = tk.Frame(self.root, bg='#0a0a1a')
         self.content.pack(side='left', fill='both', expand=True, padx=10, pady=10)
         
-        # Status bar - removida a linha de texto
-        self.status_bar = tk.Label(self.root, text="", bg='#0f3460', fg='#00ff88', anchor='w', font=('Arial', 9))
+        self.status_bar = tk.Label(self.root, text="✅ SISTEMA DE DEFESA TOTAL ATIVO | 7 Camadas de Proteção",
+                                   bg='#0f3460', fg='#00ff88', anchor='w', font=('Arial', 9))
         self.status_bar.pack(fill='x', side='bottom')
         
         self.tabs = {
@@ -92,6 +94,7 @@ class MainWindow:
             "threats": ThreatsTab(self.content, self),
             "firewall": FirewallTab(self.content, self),
             "counter": CounterTab(self.content, self),
+            "adv_dashboard": AdvancedDashboard(self.content, self),
             "ai": AITab(self.content, self),
             "logs": LogsTab(self.content, self)
         }

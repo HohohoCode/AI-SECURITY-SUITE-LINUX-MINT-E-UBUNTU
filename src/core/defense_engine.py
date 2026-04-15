@@ -6,6 +6,10 @@ from datetime import datetime
 from src.utils.network_utils import NetworkUtils
 from src.core.advanced_ai import UltraAdvancedAI
 from src.core.autonomous_agent import AutonomousDefenseAgent
+from src.core.honeypot import Honeypot
+from src.core.threat_intel import ThreatIntelligence
+from src.core.behavioral_analysis import BehavioralAnalyzer
+from src.core.proactive_defense import ProactiveDefense
 
 class DefenseEngine:
     def __init__(self, settings, callback=None):
@@ -16,22 +20,26 @@ class DefenseEngine:
         self.blocked_ips = set()
         self.stats = {"threats_detected": 0, "threats_blocked": 0, "packets_analyzed": 0, "start_time": None, "active_connections": 0}
         
-        # IA e Agente Autônomo
+        # Módulos de defesa
         self.ai_engine = UltraAdvancedAI(callback)
         self.autonomous_agent = None
+        self.honeypot = None
+        self.threat_intel = None
+        self.behavioral_analyzer = None
+        self.proactive_defense = None
         
         # Rastreadores
         self.connection_tracker = {}
         self.failed_login_tracker = {}
         self.last_cleanup = time.time()
         
-        # Lista de IPs válidos para demonstração
+        # IPs de demonstração
         self.valid_demo_ips = [
             "185.130.5.253", "185.220.101.1", "45.227.254.1",
             "103.115.16.1", "5.188.86.1", "185.165.29.1"
         ]
         self.demo_index = 0
-        
+    
     def _is_valid_ip(self, ip):
         if not ip or not isinstance(ip, str):
             return False
@@ -47,35 +55,48 @@ class DefenseEngine:
                 return False
         return True
     
-    def _get_valid_ip(self, ip):
-        if self._is_valid_ip(ip):
-            return ip
-        self.demo_index = (self.demo_index + 1) % len(self.valid_demo_ips)
-        return self.valid_demo_ips[self.demo_index]
-        
     def start(self):
         self.is_active = True
         self.stats["start_time"] = time.time()
-        self._log("🚀 Defesa ATIVADA com IA Ultra-Avançada", "success")
+        self._log("🚀 DEFESA TOTAL ATIVADA!", "success")
+        self._log("🧠 IA Ultra-Avançada | 🤖 Agente Autônomo | 🍯 Honeypot", "info")
+        self._log("🕵️ Threat Intelligence | 📊 Behavioral Analysis | 🛡️ Proactive Defense", "info")
         
-        # Iniciar Agente Autônomo
+        # Iniciar todos os módulos
         self.autonomous_agent = AutonomousDefenseAgent(self, self.callback)
         self.autonomous_agent.start()
         
+        self.honeypot = Honeypot(self.callback)
+        self.honeypot.start()
+        
+        self.threat_intel = ThreatIntelligence(self.callback)
+        self.threat_intel.start()
+        
+        self.behavioral_analyzer = BehavioralAnalyzer(self.callback)
+        self.behavioral_analyzer.start()
+        
+        self.proactive_defense = ProactiveDefense(self.callback)
+        self.proactive_defense.start()
+        
         self.monitor_thread = threading.Thread(target=self._monitor, daemon=True)
         self.monitor_thread.start()
-        
+    
     def stop(self):
         self.is_active = False
         if self.autonomous_agent:
             self.autonomous_agent.stop()
-        self._log("🛑 Defesa DESATIVADA", "warning")
-        
+        if self.honeypot:
+            self.honeypot.stop()
+        if self.behavioral_analyzer:
+            self.behavioral_analyzer.stop()
+        if self.proactive_defense:
+            self.proactive_defense.stop()
+        self._log("🛑 Defesa TOTAL DESATIVADA", "warning")
+    
     def _monitor(self):
         while self.is_active:
             time.sleep(2)
             self.stats["packets_analyzed"] += 50
-            
             self._update_connections()
             self._detect_ddos()
             self._detect_bruteforce()
@@ -196,6 +217,12 @@ class DefenseEngine:
         self.demo_index = (self.demo_index + 1) % len(self.valid_demo_ips)
         return self.valid_demo_ips[self.demo_index]
     
+    def _get_valid_ip(self, ip):
+        if self._is_valid_ip(ip):
+            return ip
+        self.demo_index = (self.demo_index + 1) % len(self.valid_demo_ips)
+        return self.valid_demo_ips[self.demo_index]
+    
     def _check_auth_logs(self):
         try:
             result = subprocess.run("sudo tail -20 /var/log/auth.log 2>/dev/null | grep -i 'Failed\\|Invalid'", 
@@ -212,7 +239,6 @@ class DefenseEngine:
     def _detect_threat(self, t_type, ip, details, confidence=100):
         if not self._is_valid_ip(ip):
             return
-            
         if ip in self.blocked_ips:
             return
             
@@ -236,7 +262,6 @@ class DefenseEngine:
     def _block_ip(self, ip, reason):
         if not self._is_valid_ip(ip):
             return False
-            
         if ip in self.blocked_ips:
             return True
         
@@ -294,13 +319,7 @@ class DefenseEngine:
     
     def get_stats(self):
         uptime = time.time() - self.stats.get("start_time", time.time()) if self.stats["start_time"] else 0
-        agent_stats = self.autonomous_agent.get_stats() if self.autonomous_agent else {}
-        return {
-            **self.stats,
-            "uptime": uptime,
-            "blocked_count": len(self.blocked_ips),
-            "agent_stats": agent_stats
-        }
+        return {**self.stats, "uptime": uptime, "blocked_count": len(self.blocked_ips)}
     
     def get_threats(self):
         return self.threats[:100]
@@ -331,6 +350,15 @@ class DefenseEngine:
         return self.ai_engine.get_model_info()
     
     def get_agent_stats(self):
+        stats = {}
         if self.autonomous_agent:
-            return self.autonomous_agent.get_stats()
-        return {}
+            stats['autonomous'] = self.autonomous_agent.get_stats()
+        if self.honeypot:
+            stats['honeypot'] = self.honeypot.get_stats()
+        if self.threat_intel:
+            stats['threat_intel'] = self.threat_intel.get_blocked_stats()
+        if self.behavioral_analyzer:
+            stats['behavioral'] = self.behavioral_analyzer.get_stats()
+        if self.proactive_defense:
+            stats['proactive'] = self.proactive_defense.get_stats()
+        return stats
