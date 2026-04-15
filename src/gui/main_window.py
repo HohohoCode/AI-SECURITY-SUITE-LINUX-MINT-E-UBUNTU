@@ -66,7 +66,7 @@ class MainWindow:
         buttons = [
             ("📊 DASHBOARD", "dashboard"),
             ("⚠️ AMEAÇAS", "threats"),
-            ("🔥 FIREWALL", "firewall"),
+            ("🚫 IPs BLOQUEADOS", "firewall"),
             ("⚔️ CONTRA-ATAQUE", "counter"),
             ("🧠 IA", "ai"),
             ("📝 LOGS", "logs")
@@ -83,8 +83,8 @@ class MainWindow:
         self.content = tk.Frame(self.root, bg='#0a0a1a')
         self.content.pack(side='left', fill='both', expand=True, padx=10, pady=10)
         
-        self.status_bar = tk.Label(self.root, text="✅ SISTEMA ATIVO | Defesa e Firewall em execução | Monitoramento contínuo",
-                                   bg='#0f3460', fg='#00ff88', anchor='w', font=('Arial', 9))
+        # Status bar - removida a linha de texto
+        self.status_bar = tk.Label(self.root, text="", bg='#0f3460', fg='#00ff88', anchor='w', font=('Arial', 9))
         self.status_bar.pack(fill='x', side='bottom')
         
         self.tabs = {
