@@ -13,7 +13,6 @@ from src.gui.firewall_tab import FirewallTab
 from src.gui.counter_tab import CounterTab
 from src.gui.logs_tab import LogsTab
 from src.gui.ai_tab import AITab
-from src.gui.advanced_dashboard import AdvancedDashboard
 
 class MainWindow:
     def __init__(self):
@@ -69,7 +68,6 @@ class MainWindow:
             ("⚠️ AMEAÇAS", "threats"),
             ("🚫 IPs BLOQUEADOS", "firewall"),
             ("⚔️ CONTRA-ATAQUE", "counter"),
-            ("📈 DASHBOARD AVANÇADO", "adv_dashboard"),
             ("🧠 IA", "ai"),
             ("📝 LOGS", "logs")
         ]
@@ -94,7 +92,6 @@ class MainWindow:
             "threats": ThreatsTab(self.content, self),
             "firewall": FirewallTab(self.content, self),
             "counter": CounterTab(self.content, self),
-            "adv_dashboard": AdvancedDashboard(self.content, self),
             "ai": AITab(self.content, self),
             "logs": LogsTab(self.content, self)
         }

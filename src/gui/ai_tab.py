@@ -7,6 +7,7 @@ class AITab(tk.Frame):
     def __init__(self, parent, app):
         super().__init__(parent, bg='#0a0a1a')
         self.app = app
+        self.last_scroll_position = 0
         self.setup_ui()
         self.start_updates()
         
@@ -163,38 +164,20 @@ class AITab(tk.Frame):
                                                     font=('Arial', 14, 'bold'))
             self.thresholds_labels[key].pack(pady=(0,5))
         
-        # ==================== SEÇÃO 3: ANÁLISE EM TEMPO REAL ====================
+        # ==================== SEÇÃO 3: ANÁLISE EM TEMPO REAL (MAIOR AINDA) ====================
         realtime_frame = tk.LabelFrame(self.inner_frame, text="📈 ANÁLISE EM TEMPO REAL", 
                                         bg='#16213e', fg='#00ff88', font=('Arial', 14, 'bold'))
         realtime_frame.pack(fill='both', expand=True, padx=30, pady=15)
         
+        # Texto MAIOR para análise em tempo real
         self.realtime_text = tk.Text(realtime_frame, bg='#0a0a1a', fg='#00ff88', 
-                                      font=('Courier', 11), height=14, wrap='word')
+                                      font=('Courier', 11), height=50, wrap='word')
         self.realtime_text.pack(fill='both', expand=True, padx=15, pady=15)
         
-        # ==================== SEÇÃO 4: LEGENDA ====================
-        legend_frame = tk.LabelFrame(self.inner_frame, text="📖 LEGENDA", 
-                                      bg='#16213e', fg='#00ff88', font=('Arial', 14, 'bold'))
-        legend_frame.pack(fill='x', padx=30, pady=15)
-        
-        legend_text = """
-        🌲 Random Forest: 200 árvores de decisão | Alta precisão
-        📈 Gradient Boosting: 150 estimadores | Aprendizado sequencial
-        🏝️ Isolation Forest: Detecção de anomalias | Isola outliers
-        🧠 Rede Neural MLP: 4 camadas ocultas | Deep Learning
-        ⚡ XGBoost: Gradient boosting otimizado (opcional)
-        💡 LightGBM: Baseado em árvores eficiente (opcional)
-        🐱 CatBoost: Tratamento categórico robusto (opcional)
-        
-        🤖 AGENTE AUTÔNOMO:
-        • Monitoramento 24/7 em tempo real
-        • Resposta automática em milissegundos
-        • Aprendizado contínuo com cada ataque
-        • Limiares adaptativos dinâmicos
-        """
-        
-        tk.Label(legend_frame, text=legend_text, bg='#16213e', fg='#ccc', 
-                font=('Courier', 10), justify='left').pack(pady=15, padx=25, anchor='w')
+        # Barra de rolagem para o texto
+        realtime_scrollbar = tk.Scrollbar(realtime_frame, orient='vertical', command=self.realtime_text.yview)
+        realtime_scrollbar.pack(side='right', fill='y')
+        self.realtime_text.config(yscrollcommand=realtime_scrollbar.set)
         
         self.update_ai_info()
         
@@ -233,19 +216,20 @@ class AITab(tk.Frame):
             # Informações do Agente Autônomo
             agent_stats = self.app.defense_engine.get_agent_stats()
             if agent_stats:
-                self.threats_analyzed_label.config(text=str(agent_stats.get('total_threats_analyzed', 0)))
-                self.agent_blocked_label.config(text=str(agent_stats.get('total_blocks', 0)))
+                autonomous = agent_stats.get('autonomous', {})
+                self.threats_analyzed_label.config(text=str(autonomous.get('total_threats_analyzed', 0)))
+                self.agent_blocked_label.config(text=str(autonomous.get('total_blocks', 0)))
                 
-                response_time = agent_stats.get('avg_response_time', 0)
+                response_time = autonomous.get('avg_response_time', 0)
                 self.response_time_label.config(text=f"{response_time:.0f}ms" if response_time > 0 else "0ms")
                 
-                uptime = agent_stats.get('uptime', 0)
+                uptime = autonomous.get('uptime', 0)
                 hours = int(uptime // 3600)
                 minutes = int((uptime % 3600) // 60)
                 self.agent_uptime_label.config(text=f"{hours}h {minutes}m")
                 
                 # Atualizar limiares
-                thresholds = agent_stats.get('active_thresholds', {})
+                thresholds = autonomous.get('active_thresholds', {})
                 if thresholds:
                     self.thresholds_labels['ddos'].config(text=str(thresholds.get('ddos_connections', 100)))
                     self.thresholds_labels['bruteforce'].config(text=str(thresholds.get('bruteforce_attempts', 10)))
@@ -256,20 +240,24 @@ class AITab(tk.Frame):
         def update_loop():
             while True:
                 if self.winfo_exists() and self.app.defense_engine and self.app.is_defense_active:
+                    # Salvar posição atual da rolagem ANTES de atualizar
+                    current_pos = self.realtime_text.yview()
+                    
                     # Obter análise dos modelos IA
                     analysis = self.app.defense_engine.ai_engine.get_real_time_analysis()
                     
                     # Obter estatísticas do agente
                     agent_stats = self.app.defense_engine.get_agent_stats()
                     
+                    # Atualizar o texto
                     self.realtime_text.delete('1.0', 'end')
                     
                     if analysis:
                         if analysis.get('is_threat'):
                             self.realtime_text.insert('1.0', f"""
-╔══════════════════════════════════════════════════════════════════════════════╗
-║                         🔴 AMEAÇA DETECTADA PELA IA 🔴                        ║
-╚══════════════════════════════════════════════════════════════════════════════╝
+╔══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                                                         🔴 AMEAÇA DETECTADA PELA IA 🔴                                                                          ║
+╚══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
 
 📊 TIPO DE AMEAÇA: {analysis.get('type', 'UNKNOWN')}
 🎯 CONFIANÇA: {analysis.get('confidence', 0):.1f}%
@@ -284,9 +272,9 @@ class AITab(tk.Frame):
                             """)
                         else:
                             self.realtime_text.insert('1.0', f"""
-╔══════════════════════════════════════════════════════════════════════════════╗
-║                         🟢 TRÁFEGO NORMAL 🟢                                  ║
-╚══════════════════════════════════════════════════════════════════════════════╝
+╔══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                                                         🟢 TRÁFEGO NORMAL 🟢                                                                                    ║
+╚══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
 
 📊 STATUS: Nenhuma ameaça detectada
 🎯 CONFIANÇA: {analysis.get('confidence', 100):.1f}%
@@ -300,25 +288,46 @@ class AITab(tk.Frame):
                     
                     # Adicionar informações do Agente
                     if agent_stats:
+                        autonomous = agent_stats.get('autonomous', {})
+                        honeypot = agent_stats.get('honeypot', {})
+                        threat_intel = agent_stats.get('threat_intel', {})
+                        behavioral = agent_stats.get('behavioral', {})
+                        proactive = agent_stats.get('proactive', {})
+                        
                         self.realtime_text.insert('end', f"""
 
-╔══════════════════════════════════════════════════════════════════════════════╗
-║                       🤖 STATUS DO AGENTE AUTÔNOMO 🤖                         ║
-╚══════════════════════════════════════════════════════════════════════════════╝
+╔══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╗
+║                                                         🤖 STATUS DO AGENTE AUTÔNOMO 🤖                                                                           ║
+╚══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════╝
 
-📊 Total de ameaças analisadas: {agent_stats.get('total_threats_analyzed', 0)}
-🚫 Total de IPs bloqueados: {agent_stats.get('total_blocks', 0)}
-⚡ Tempo médio de resposta: {agent_stats.get('avg_response_time', 0):.0f}ms
-⏱️ Tempo ativo: {int(agent_stats.get('uptime', 0) // 3600)}h {int((agent_stats.get('uptime', 0) % 3600) // 60)}m
-🔒 IPs na cache de bloqueio: {agent_stats.get('blocked_ips_count', 0)}
-📈 Histórico de ameaças: {agent_stats.get('threats_in_history', 0)}
+📊 Total de ameaças analisadas: {autonomous.get('total_threats_analyzed', 0)}
+🚫 Total de IPs bloqueados: {autonomous.get('total_blocks', 0)}
+⚡ Tempo médio de resposta: {autonomous.get('avg_response_time', 0):.0f}ms
+⏱️ Tempo ativo: {int(autonomous.get('uptime', 0) // 3600)}h {int((autonomous.get('uptime', 0) % 3600) // 60)}m
+🔒 IPs na cache de bloqueio: {autonomous.get('blocked_ips_count', 0)}
+📈 Histórico de ameaças: {autonomous.get('threats_in_history', 0)}
 
 🎯 LIMIARES ADAPTATIVOS ATUAIS:
-   • DDoS: {agent_stats.get('active_thresholds', {}).get('ddos_connections', 100)} conexões/10s
-   • Brute Force: {agent_stats.get('active_thresholds', {}).get('bruteforce_attempts', 10)} tentativas/60s
-   • Port Scan: {agent_stats.get('active_thresholds', {}).get('port_scan_ports', 20)} portas/10s
-   • Confiança mínima: {agent_stats.get('active_thresholds', {}).get('confidence_threshold', 70)}%
+   • DDoS: {autonomous.get('active_thresholds', {}).get('ddos_connections', 100)} conexões/10s
+   • Brute Force: {autonomous.get('active_thresholds', {}).get('bruteforce_attempts', 10)} tentativas/60s
+   • Port Scan: {autonomous.get('active_thresholds', {}).get('port_scan_ports', 20)} portas/10s
+   • Confiança mínima: {autonomous.get('active_thresholds', {}).get('confidence_threshold', 70)}%
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🍯 HONEYPOT: {honeypot.get('total_attacks', 0)} ataques registrados | {honeypot.get('unique_attackers', 0)} atacantes únicos
+
+🕵️ THREAT INTELLIGENCE: {threat_intel.get('total_malicious_ips', 0)} IPs maliciosos na lista negra
+
+📊 ANÁLISE COMPORTAMENTAL: {behavioral.get('total_users', 0)} usuários monitorados | {behavioral.get('anomalies_detected', 0)} anomalias
+
+🛡️ DEFESA PROATIVA: {proactive.get('isolated_machines', 0)} máquinas isoladas | {proactive.get('rate_limited_ips', 0)} IPs com rate limit
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """)
+                    
+                    # RESTAURAR a posição da rolagem após atualizar
+                    self.realtime_text.yview_moveto(current_pos[0])
                     
                 time.sleep(2)
         threading.Thread(target=update_loop, daemon=True).start()
