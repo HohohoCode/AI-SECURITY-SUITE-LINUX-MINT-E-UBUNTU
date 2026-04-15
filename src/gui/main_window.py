@@ -43,7 +43,7 @@ class MainWindow:
             pass
     
     def setup_ui(self):
-        # Header mais limpo (sem badges)
+        # Header
         header = tk.Frame(self.root, bg='#0f1535', height=60)
         header.pack(fill='x')
         header.pack_propagate(False)
@@ -57,7 +57,7 @@ class MainWindow:
         tk.Label(title_frame, text="PRO", font=('Segoe UI', 10, 'bold'),
                 bg='#00d4ff', fg='#0a0e27', padx=6, pady=2).pack(side='left')
         
-        # Sidebar
+        # Sidebar (sem estatísticas)
         sidebar = tk.Frame(self.root, bg='#0f1535', width=240)
         sidebar.pack(side='left', fill='y', padx=10, pady=10)
         sidebar.pack_propagate(False)
@@ -81,20 +81,8 @@ class MainWindow:
             btn.pack(pady=8, padx=15, fill='x')
             self.tab_buttons[name] = btn
         
+        # Separador
         tk.Frame(sidebar, bg='#1a2352', height=2).pack(fill='x', pady=15, padx=15)
-        
-        tk.Label(sidebar, text="📊 ESTATÍSTICAS", font=('Segoe UI', 10, 'bold'),
-                bg='#0f1535', fg='#8892b0').pack(pady=(10,5))
-        
-        self.sidebar_stats = {}
-        stats = [("Ameaças", "0"), ("Bloqueios", "0"), ("Ativo", "00:00:00")]
-        for label, default in stats:
-            frame = tk.Frame(sidebar, bg='#1a2352', relief='flat')
-            frame.pack(fill='x', padx=15, pady=5)
-            tk.Label(frame, text=label, bg='#1a2352', fg='#8892b0', font=('Segoe UI', 9)).pack(side='left')
-            self.sidebar_stats[label] = tk.Label(frame, text=default, bg='#1a2352', fg='#00d4ff',
-                                                  font=('Segoe UI', 10, 'bold'))
-            self.sidebar_stats[label].pack(side='right')
         
         self.content = tk.Frame(self.root, bg='#0a0e27')
         self.content.pack(side='left', fill='both', expand=True, padx=10, pady=10)
@@ -154,11 +142,6 @@ class MainWindow:
         def update_sidebar():
             if self.defense_engine:
                 stats = self.defense_engine.get_stats()
-                self.sidebar_stats["Ameaças"].config(text=str(stats.get("threats_detected", 0)))
-                self.sidebar_stats["Bloqueios"].config(text=str(stats.get("threats_blocked", 0)))
-                uptime = stats.get("uptime", 0)
-                h, m, s = int(uptime//3600), int((uptime%3600)//60), int(uptime%60)
-                self.sidebar_stats["Ativo"].config(text=f"{h:02d}:{m:02d}:{s:02d}")
                 self.dashboard_tab.update_stats_from_engine()
             self.root.after(2000, update_sidebar)
         

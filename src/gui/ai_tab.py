@@ -1,18 +1,14 @@
 import tkinter as tk
 from tkinter import ttk
-import threading
 import time
-import subprocess
-from datetime import datetime
 
 class AITab(tk.Frame):
     def __init__(self, parent, app):
         super().__init__(parent, bg='#0a0e27')
         self.app = app
-        self.last_threats = []
         self.setup_ui()
-        self.start_realtime_analysis()
         self.update_models_status()
+        self.start_updates()
     
     def setup_ui(self):
         # Header
@@ -20,7 +16,7 @@ class AITab(tk.Frame):
         header.pack(fill='x', pady=20, padx=30)
         tk.Label(header, text="🧠 IA ULTRA-AVANÇADA", font=('Segoe UI', 24, 'bold'),
                 bg='#0a0e27', fg='#00d4ff').pack()
-        tk.Label(header, text="Ensemble Learning com 7 Modelos de IA | Análise em Tempo Real", 
+        tk.Label(header, text="Ensemble Learning com 7 Modelos de IA", 
                 bg='#0a0e27', fg='#8892b0', font=('Segoe UI', 11)).pack()
         
         # ==================== CARDS PRINCIPAIS ====================
@@ -74,44 +70,23 @@ class AITab(tk.Frame):
         
         self.models_tree.pack(fill='x')
         
-        # ==================== ANÁLISE EM TEMPO REAL ====================
-        realtime_frame = tk.LabelFrame(self, text="📈 ANÁLISE EM TEMPO REAL", 
-                                        bg='#151c3c', fg='#00d4ff', font=('Segoe UI', 13, 'bold'))
-        realtime_frame.pack(fill='both', expand=True, padx=30, pady=15)
+        # ==================== INFORMAÇÕES DOS MODELOS ====================
+        info_frame = tk.LabelFrame(self, text="📊 INFORMAÇÕES DOS MODELOS", 
+                                    bg='#151c3c', fg='#00d4ff', font=('Segoe UI', 13, 'bold'))
+        info_frame.pack(fill='both', expand=True, padx=30, pady=15)
         
-        # Canvas com scroll para o texto
-        text_container = tk.Frame(realtime_frame, bg='#151c3c')
-        text_container.pack(fill='both', expand=True, padx=10, pady=10)
+        info_text = """
+        🌲 Random Forest: 200 árvores de decisão | Alta precisão
+        📈 Gradient Boosting: 150 estimadores | Aprendizado sequencial
+        🏝️ Isolation Forest: Detecção de anomalias | Isola outliers
+        🧠 Rede Neural MLP: 4 camadas ocultas | Deep Learning
+        ⚡ XGBoost: Gradient boosting otimizado | Alta performance
+        💡 LightGBM: Baseado em árvores | Rápido e eficiente
+        🐱 CatBoost: Tratamento automático de categorias | Robusto
+        """
         
-        scroll_text = tk.Scrollbar(text_container)
-        scroll_text.pack(side='right', fill='y')
-        
-        self.realtime_text = tk.Text(text_container, bg='#0a0e27', fg='#00ff88', 
-                                      font=('Courier', 10), wrap='word',
-                                      yscrollcommand=scroll_text.set,
-                                      height=20)
-        self.realtime_text.pack(fill='both', expand=True)
-        scroll_text.config(command=self.realtime_text.yview)
-        
-        # Configurar tags de cores
-        self.realtime_text.tag_config("critical", foreground="#ff4444")
-        self.realtime_text.tag_config("high", foreground="#ff8800")
-        self.realtime_text.tag_config("normal", foreground="#00ff88")
-        self.realtime_text.tag_config("info", foreground="#00d4ff")
-        
-        # Mensagem inicial
-        self.realtime_text.insert('end', "🧠 IA Inicializada - Aguardando análise...\n\n", "info")
-        self.realtime_text.insert('end', "📊 Monitorando:\n", "info")
-        self.realtime_text.insert('end', "  • Logs de autenticação (/var/log/auth.log)\n", "normal")
-        self.realtime_text.insert('end', "  • Conexões de rede (ss -tun)\n", "normal")
-        self.realtime_text.insert('end', "  • Tráfego suspeito\n", "normal")
-        self.realtime_text.insert('end', "✅ Sistema protegido por IA em tempo real\n", "info")
-    
-    def update_realtime_display(self, new_content):
-        """Atualiza o display substituindo o conteúdo anterior"""
-        self.realtime_text.delete('1.0', 'end')
-        self.realtime_text.insert('1.0', new_content)
-        self.realtime_text.see('end')
+        tk.Label(info_frame, text=info_text, bg='#151c3c', fg='#00ff88', 
+                font=('Courier', 10), justify='left').pack(pady=15, padx=20, anchor='w')
     
     def update_models_status(self):
         """Atualiza o status dos modelos"""
@@ -166,68 +141,9 @@ class AITab(tk.Frame):
         else:
             self.accuracy_label.config(text="75-80%")
     
-    def start_realtime_analysis(self):
-        """Inicia a análise em tempo real substituindo o conteúdo"""
-        def analyze():
-            try:
-                # Obter estatísticas
-                stats = self.app.defense_engine.get_stats() if self.app.defense_engine else {}
-                threats = self.app.defense_engine.get_threats() if self.app.defense_engine else []
-                
-                # Contar ameaças
-                ddos_count = sum(1 for t in threats if t.get('type') == 'DDoS')
-                brute_count = sum(1 for t in threats if t.get('type') == 'BRUTE_FORCE')
-                scan_count = sum(1 for t in threats if t.get('type') == 'PORT_SCAN')
-                
-                # Nível de alerta
-                if ddos_count > 0:
-                    alert_level = "🔴 ALERTA CRÍTICO"
-                elif brute_count > 0:
-                    alert_level = "🟠 ALERTA ALTO"
-                elif scan_count > 0:
-                    alert_level = "🟡 ALERTA MÉDIO"
-                else:
-                    alert_level = "🟢 SEGURO"
-                
-                # Construir novo conteúdo (substitui o anterior)
-                new_content = f"""
-╔══════════════════════════════════════════════════════════════════════════════════════════════════════════╗
-║                                         {alert_level}                                                       ║
-╚══════════════════════════════════════════════════════════════════════════════════════════════════════════╝
-
-📊 ESTATÍSTICAS EM TEMPO REAL:
-   • Total de ameaças detectadas: {stats.get('threats_detected', 0)}
-   • Total de IPs bloqueados: {stats.get('threats_blocked', 0)}
-   • Pacotes analisados: {stats.get('packets_analyzed', 0)}
-   • Conexões ativas: {stats.get('active_connections', 0)}
-   • Tempo ativo: {self._format_uptime(stats.get('uptime', 0))}
-
-🎯 DETECÇÕES POR TIPO:
-   • DDoS: {ddos_count}
-   • Brute Force: {brute_count}
-   • Port Scan: {scan_count}
-
-⚡ SISTEMA DE VOTAÇÃO:
-   • Tipo: Votação ponderada
-   • Confiança média: {min(95, 70 + stats.get('threats_detected', 0))}%
-
-✅ A IA está monitorando ativamente o sistema em busca de ameaças.
-   Quando uma ameaça for detectada, o IP será bloqueado automaticamente.
-"""
-                # Substituir conteúdo
-                self.realtime_text.delete('1.0', 'end')
-                self.realtime_text.insert('1.0', new_content)
-                self.realtime_text.see('end')
-                
-            except Exception as e:
-                pass
-            
-            self.after(3000, analyze)
-        
-        self.after(1000, analyze)
-    
-    def _format_uptime(self, seconds):
-        h = int(seconds // 3600)
-        m = int((seconds % 3600) // 60)
-        s = int(seconds % 60)
-        return f"{h:02d}:{m:02d}:{s:02d}"
+    def start_updates(self):
+        """Atualização periódica do status dos modelos"""
+        def update():
+            self.update_models_status()
+            self.after(10000, update)
+        self.after(5000, update)

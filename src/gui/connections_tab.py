@@ -2,7 +2,6 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import subprocess
 import threading
-import time
 import re
 
 class ConnectionsTab(tk.Frame):
@@ -10,7 +9,8 @@ class ConnectionsTab(tk.Frame):
         super().__init__(parent, bg='#0a0e27')
         self.app = app
         self.setup_ui()
-        self.start_refresh()
+        # Atualiza uma vez ao abrir a aba
+        self.refresh_connections()
     
     def setup_ui(self):
         # Título
@@ -77,32 +77,23 @@ class ConnectionsTab(tk.Frame):
                                           padx=20, pady=8, cursor='hand2', state='disabled')
         self.kill_process_btn.pack(side='left', padx=10)
         
-        # Informações adicionais
-        info_frame = tk.Frame(self, bg='#151c3c', relief='flat', bd=1)
-        info_frame.pack(fill='x', padx=30, pady=10)
-        
-        tk.Label(info_frame, text="📊 INFORMAÇÕES", font=('Segoe UI', 10, 'bold'),
-                bg='#151c3c', fg='#00d4ff').pack(side='left', padx=15, pady=8)
-        
-        self.conn_count_label = tk.Label(info_frame, text="Conexões: 0", bg='#151c3c', fg='#00ff88', font=('Segoe UI', 9))
-        self.conn_count_label.pack(side='left', padx=15)
-        
-        self.listen_count_label = tk.Label(info_frame, text="Escutando: 0", bg='#151c3c', fg='#ffaa00', font=('Segoe UI', 9))
-        self.listen_count_label.pack(side='left', padx=15)
-        
         # Bind de seleção
         self.tree.bind('<<TreeviewSelect>>', self.on_select)
-        
-        # Atualizar conexões inicialmente
-        self.refresh_connections()
+    
+    def on_select(self, event):
+        """Quando uma conexão é selecionada"""
+        selection = self.tree.selection()
+        if selection:
+            self.kill_btn.config(state='normal')
+            self.kill_process_btn.config(state='normal')
+        else:
+            self.kill_btn.config(state='disabled')
+            self.kill_process_btn.config(state='disabled')
     
     def refresh_connections(self):
         """Atualiza a lista de conexões"""
         def run():
             self.tree.delete(*self.tree.get_children())
-            
-            established = 0
-            listening = 0
             
             try:
                 # Usar ss para obter conexões detalhadas
@@ -116,14 +107,11 @@ class ConnectionsTab(tk.Frame):
                     parts = line.split()
                     if len(parts) >= 6:
                         proto = parts[0]
-                        recv_q = parts[1]
-                        send_q = parts[2]
                         local = parts[3]
                         remote = parts[4]
                         state = parts[5]
                         
                         # Extrair PID e programa
-                        pid_prog = ""
                         pid = ""
                         program = ""
                         if len(parts) >= 7:
@@ -138,14 +126,6 @@ class ConnectionsTab(tk.Frame):
                                 program = prog_match.group(1)
                             else:
                                 program = pid_prog.split(',')[-1] if ',' in pid_prog else pid_prog
-                        
-                        # Contar conexões estabelecidas
-                        if state == "ESTAB":
-                            established += 1
-                        
-                        # Contar portas escutando
-                        if "LISTEN" in state:
-                            listening += 1
                         
                         # Determinar cor baseada no estado
                         tag = ""
@@ -163,24 +143,10 @@ class ConnectionsTab(tk.Frame):
                 self.tree.tag_configure("listening", foreground="#00d4ff")
                 self.tree.tag_configure("warning", foreground="#ffaa00")
                 
-                # Atualizar contadores
-                self.conn_count_label.config(text=f"Conexões: {established}")
-                self.listen_count_label.config(text=f"Escutando: {listening}")
-                
             except Exception as e:
                 self.tree.insert('', 'end', values=("Erro", "", "", f"Erro ao listar conexões: {e}", "", ""))
         
         threading.Thread(target=run, daemon=True).start()
-    
-    def on_select(self, event):
-        """Quando uma conexão é selecionada"""
-        selection = self.tree.selection()
-        if selection:
-            self.kill_btn.config(state='normal')
-            self.kill_process_btn.config(state='normal')
-        else:
-            self.kill_btn.config(state='disabled')
-            self.kill_process_btn.config(state='disabled')
     
     def kill_connection(self):
         """Encerra a conexão selecionada usando tcpkill"""
@@ -205,24 +171,19 @@ class ConnectionsTab(tk.Frame):
             messagebox.showerror("Erro", "Não foi possível extrair IP/porta")
             return
         
-        local_ip = local_parts[0]
-        local_port = local_parts[1]
         remote_ip = remote_parts[0]
         remote_port = remote_parts[1]
         
         if messagebox.askyesno("Confirmar", f"Encerrar conexão?\n\n"
                                f"Protocolo: {proto.upper()}\n"
-                               f"Local: {local}\n"
                                f"Remoto: {remote}\n\n"
                                f"Esta ação irá resetar a conexão."):
             
             def run():
                 try:
-                    # Usar tcpkill para encerrar a conexão
                     cmd = f"sudo tcpkill -9 host {remote_ip} and port {remote_port} 2>/dev/null"
                     subprocess.run(cmd, shell=True, timeout=5)
                     self.app.logs_tab.add_log(f"🔪 Conexão encerrada: {remote_ip}:{remote_port}", "success")
-                    time.sleep(1)
                     self.refresh_connections()
                 except Exception as e:
                     self.app.logs_tab.add_log(f"❌ Erro ao encerrar conexão: {e}", "error")
@@ -256,16 +217,8 @@ class ConnectionsTab(tk.Frame):
                 try:
                     subprocess.run(f"sudo kill -9 {pid}", shell=True, timeout=5)
                     self.app.logs_tab.add_log(f"🗑️ Processo {pid} ({program}) encerrado", "success")
-                    time.sleep(1)
                     self.refresh_connections()
                 except Exception as e:
                     self.app.logs_tab.add_log(f"❌ Erro ao encerrar processo: {e}", "error")
             
             threading.Thread(target=run, daemon=True).start()
-    
-    def start_refresh(self):
-        """Atualização automática a cada 5 segundos"""
-        def refresh():
-            self.refresh_connections()
-            self.after(5000, refresh)
-        self.after(2000, refresh)
