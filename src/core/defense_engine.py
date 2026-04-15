@@ -5,6 +5,7 @@ import re
 from datetime import datetime
 from src.utils.network_utils import NetworkUtils
 from src.core.advanced_ai import UltraAdvancedAI
+from src.core.autonomous_agent import AutonomousDefenseAgent
 
 class DefenseEngine:
     def __init__(self, settings, callback=None):
@@ -15,8 +16,9 @@ class DefenseEngine:
         self.blocked_ips = set()
         self.stats = {"threats_detected": 0, "threats_blocked": 0, "packets_analyzed": 0, "start_time": None, "active_connections": 0}
         
-        # Usar IA Ultra-Avançada
+        # IA e Agente Autônomo
         self.ai_engine = UltraAdvancedAI(callback)
+        self.autonomous_agent = None
         
         # Rastreadores
         self.connection_tracker = {}
@@ -25,33 +27,17 @@ class DefenseEngine:
         
         # Lista de IPs válidos para demonstração
         self.valid_demo_ips = [
-            "185.130.5.253",   # Rússia
-            "185.220.101.1",   # Alemanha
-            "45.227.254.1",    # Brasil
-            "103.115.16.1",    # China
-            "5.188.86.1",      # Holanda
-            "185.165.29.1",    # Ucrânia
-            "94.102.61.1",     # Romênia
-            "185.244.36.1",    # Suécia
-            "45.155.205.1",    # França
-            "185.174.137.1",   # Polônia
-            "91.210.106.1",    # Hungria
-            "46.161.41.1",     # Moldávia
-            "193.56.28.1",     # República Checa
-            "185.154.184.1",   # Eslováquia
-            "109.201.133.1"    # Bulgária
+            "185.130.5.253", "185.220.101.1", "45.227.254.1",
+            "103.115.16.1", "5.188.86.1", "185.165.29.1"
         ]
         self.demo_index = 0
         
     def _is_valid_ip(self, ip):
-        """Verifica se é um IP válido (formato correto)"""
         if not ip or not isinstance(ip, str):
             return False
-        # Padrão de IP válido
         pattern = re.compile(r'^(\d{1,3}\.){3}\d{1,3}$')
         if not pattern.match(ip):
             return False
-        # Verificar se cada parte está entre 0 e 255
         parts = ip.split('.')
         for part in parts:
             try:
@@ -62,25 +48,27 @@ class DefenseEngine:
         return True
     
     def _get_valid_ip(self, ip):
-        """Retorna um IP válido ou um IP de demonstração"""
         if self._is_valid_ip(ip):
             return ip
-        # Retornar IP de demonstração
         self.demo_index = (self.demo_index + 1) % len(self.valid_demo_ips)
-        demo_ip = self.valid_demo_ips[self.demo_index]
-        if ip and ip != "Address" and ip != "None":
-            self._log(f"⚠️ IP inválido recebido: '{ip}', usando IP de demonstração: {demo_ip}", "warning")
-        return demo_ip
+        return self.valid_demo_ips[self.demo_index]
         
     def start(self):
         self.is_active = True
         self.stats["start_time"] = time.time()
-        self._log("🚀 Defesa ATIVADA com IA Ultra-Avançada (Ensemble de 7 Modelos)", "success")
+        self._log("🚀 Defesa ATIVADA com IA Ultra-Avançada", "success")
+        
+        # Iniciar Agente Autônomo
+        self.autonomous_agent = AutonomousDefenseAgent(self, self.callback)
+        self.autonomous_agent.start()
+        
         self.monitor_thread = threading.Thread(target=self._monitor, daemon=True)
         self.monitor_thread.start()
         
     def stop(self):
         self.is_active = False
+        if self.autonomous_agent:
+            self.autonomous_agent.stop()
         self._log("🛑 Defesa DESATIVADA", "warning")
         
     def _monitor(self):
@@ -96,7 +84,6 @@ class DefenseEngine:
                 self._cleanup_trackers()
                 self.last_cleanup = time.time()
             
-            # Análise com IA Ultra-Avançada
             self._ai_analysis()
             self._check_auth_logs()
     
@@ -106,7 +93,6 @@ class DefenseEngine:
                                    shell=True, capture_output=True, text=True, timeout=3)
             if result.stdout:
                 ips = result.stdout.strip().split('\n')
-                # Filtrar apenas IPs válidos
                 valid_ips = [ip for ip in ips if self._is_valid_ip(ip)]
                 self.stats["active_connections"] = len(valid_ips)
                 
@@ -134,7 +120,7 @@ class DefenseEngine:
             total_connections = sum(c for _, c in recent)
             
             if total_connections > 100 and ip not in self.blocked_ips:
-                self._detect_threat("DDoS", ip, f"Alto tráfego: {total_connections} conexões em {window_seconds}s", 95)
+                self._detect_threat("DDoS", ip, f"Alto tráfego: {total_connections} conexões", 95)
                 self._block_ip(ip, "DDoS Detectado")
             
             self.connection_tracker[ip] = recent
@@ -159,7 +145,7 @@ class DefenseEngine:
                     attempts = len(recent)
                     
                     if attempts > 10 and ip not in self.blocked_ips:
-                        self._detect_threat("BRUTE_FORCE", ip, f"{attempts} tentativas em {window_seconds}s", 90)
+                        self._detect_threat("BRUTE_FORCE", ip, f"{attempts} tentativas", 90)
                         self._block_ip(ip, "Brute Force Detectado")
                     
                     self.failed_login_tracker[ip] = recent
@@ -189,42 +175,26 @@ class DefenseEngine:
                 confidence = analysis.get("confidence", 0)
                 ip = self._get_suspicious_ip()
                 
-                # Garantir que temos um IP válido
                 valid_ip = self._get_valid_ip(ip)
                 if valid_ip and valid_ip not in self.blocked_ips:
-                    self._detect_threat(threat_type, valid_ip, f"Ensemble IA detectou com {confidence:.1f}% de confiança", confidence)
+                    self._detect_threat(threat_type, valid_ip, f"IA detectou", confidence)
                     self._block_ip(valid_ip, f"IA: {threat_type}")
         except Exception as e:
             pass
     
     def _get_suspicious_ip(self):
-        """Obtém IP suspeito das conexões ativas"""
         try:
             result = subprocess.run("ss -tun state established 2>/dev/null | awk '{print $5}' | cut -d: -f1 | grep -v '127.0.0.1' | grep -v '192.168.' | grep -v '10.' | head -1",
                                    shell=True, capture_output=True, text=True, timeout=3)
             if result.stdout and result.stdout.strip():
                 ip = result.stdout.strip()
-                if self._is_valid_ip(ip) and not self._is_local_ip(ip):
+                if self._is_valid_ip(ip):
                     return ip
         except:
             pass
         
-        # Retornar IP de demonstração válido
         self.demo_index = (self.demo_index + 1) % len(self.valid_demo_ips)
         return self.valid_demo_ips[self.demo_index]
-    
-    def _is_local_ip(self, ip):
-        """Verifica se o IP é local/privado"""
-        if not self._is_valid_ip(ip):
-            return True
-        private_ranges = ['10.', '192.168.', '172.16.', '172.17.', '172.18.', '172.19.',
-                         '172.20.', '172.21.', '172.22.', '172.23.', '172.24.', '172.25.',
-                         '172.26.', '172.27.', '172.28.', '172.29.', '172.30.', '172.31.',
-                         '127.', '0.']
-        for private in private_ranges:
-            if ip.startswith(private):
-                return True
-        return False
     
     def _check_auth_logs(self):
         try:
@@ -234,15 +204,13 @@ class DefenseEngine:
                 ips = re.findall(r'\d+\.\d+\.\d+\.\d+', result.stdout)
                 for ip in ips[:2]:
                     if self._is_valid_ip(ip) and ip not in self.blocked_ips:
-                        self._detect_threat("BRUTE_FORCE", ip, "Múltiplas tentativas de login", 85)
+                        self._detect_threat("BRUTE_FORCE", ip, "Múltiplas tentativas", 85)
                         self._block_ip(ip, "Brute Force")
         except:
             pass
     
     def _detect_threat(self, t_type, ip, details, confidence=100):
-        # Validar IP antes de prosseguir
         if not self._is_valid_ip(ip):
-            self._log(f"⚠️ Tentativa de detectar ameaça com IP inválido: {ip}, ignorando", "warning")
             return
             
         if ip in self.blocked_ips:
@@ -266,25 +234,17 @@ class DefenseEngine:
             self.callback(threat)
     
     def _block_ip(self, ip, reason):
-        """Bloqueia IP real - apenas para IPs válidos"""
         if not self._is_valid_ip(ip):
-            self._log(f"❌ Não é possível bloquear IP inválido: {ip}", "error")
             return False
             
         if ip in self.blocked_ips:
             return True
         
-        if self._is_local_ip(ip):
-            self._log(f"⚠️ IP local {ip} não será bloqueado", "warning")
-            return False
-        
         try:
-            # Verificar se UFW está ativo
             status_result = subprocess.run("sudo ufw status", shell=True, capture_output=True, text=True, timeout=5)
             if "inactive" in status_result.stdout.lower():
                 subprocess.run("sudo ufw --force enable", shell=True, capture_output=True, timeout=10)
             
-            # Bloquear com UFW
             cmd = f"sudo ufw deny from {ip} comment '{reason}'"
             result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=10)
             
@@ -295,7 +255,6 @@ class DefenseEngine:
                 self._auto_counter(ip, reason)
                 return True
             else:
-                self._log(f"❌ Falha ao bloquear IP {ip}", "error")
                 return False
         except Exception as e:
             self._log(f"❌ Erro ao bloquear IP {ip}: {str(e)[:100]}", "error")
@@ -335,7 +294,13 @@ class DefenseEngine:
     
     def get_stats(self):
         uptime = time.time() - self.stats.get("start_time", time.time()) if self.stats["start_time"] else 0
-        return {**self.stats, "uptime": uptime, "blocked_count": len(self.blocked_ips)}
+        agent_stats = self.autonomous_agent.get_stats() if self.autonomous_agent else {}
+        return {
+            **self.stats,
+            "uptime": uptime,
+            "blocked_count": len(self.blocked_ips),
+            "agent_stats": agent_stats
+        }
     
     def get_threats(self):
         return self.threats[:100]
@@ -364,3 +329,8 @@ class DefenseEngine:
     
     def get_ai_info(self):
         return self.ai_engine.get_model_info()
+    
+    def get_agent_stats(self):
+        if self.autonomous_agent:
+            return self.autonomous_agent.get_stats()
+        return {}
