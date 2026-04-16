@@ -13,11 +13,10 @@ class DefenseEngine:
         self.callback = callback
         self.is_active = True
         
-        # Limitar tamanho do histórico
         self.threats = []
         self.blocked_ips = set()
         self.counter_attacks = []
-        self.max_history = 100  # Limite de histórico
+        self.max_history = 100
         
         self.stats = {
             "threats_detected": 0,
@@ -30,21 +29,41 @@ class DefenseEngine:
         self.ai_engine = AIEngine(self._handle_ai_event)
         self._activate_firewall()
         
-        # Monitoramento com intervalo maior
         self.monitor_thread = threading.Thread(target=self._monitor_packets, daemon=True)
         self.monitor_thread.start()
         
         self._log("🛡️ Defesa TOTAL ativada", "success")
     
+    def _is_local_ip(self, ip):
+        """Verifica se o IP é da rede local (não deve ser bloqueado)"""
+        if not ip:
+            return True
+        
+        # Redes privadas
+        private_ranges = [
+            '10.',           # 10.0.0.0/8
+            '192.168.',      # 192.168.0.0/16
+            '172.16.', '172.17.', '172.18.', '172.19.',
+            '172.20.', '172.21.', '172.22.', '172.23.',
+            '172.24.', '172.25.', '172.26.', '172.27.',
+            '172.28.', '172.29.', '172.30.', '172.31.',  # 172.16.0.0/12
+            '127.',          # localhost
+            '0.',            # 0.0.0.0/8
+            '169.254.'       # link-local
+        ]
+        
+        for private in private_ranges:
+            if ip.startswith(private):
+                return True
+        return False
+    
     def _monitor_packets(self):
-        """Monitora pacotes com intervalo maior"""
         last_rx = 0
         last_tx = 0
         counter = 0
         
         while self.is_active:
             try:
-                # Atualizar a cada 10 segundos (antes era 5)
                 result = subprocess.run("cat /proc/net/dev | grep -E 'eth0|wlan0|enp|wl' | head -1", 
                                        shell=True, capture_output=True, text=True, timeout=3)
                 if result.stdout:
@@ -61,19 +80,16 @@ class DefenseEngine:
                         last_rx = rx_bytes
                         last_tx = tx_bytes
                 
-                # Atualizar conexões a cada 10 segundos
                 result = subprocess.run("ss -tun state established 2>/dev/null | wc -l",
                                        shell=True, capture_output=True, text=True, timeout=3)
                 if result.stdout:
                     conn_count = int(result.stdout.strip())
                     self.stats["active_connections"] = max(0, conn_count - 1)
                 
-                # Pequena pausa para não sobrecarregar
                 time.sleep(10)
                 
-                # Limpar histórico antigo a cada 10 minutos
                 counter += 1
-                if counter >= 60:  # ~10 minutos
+                if counter >= 60:
                     self._cleanup_history()
                     counter = 0
                     
@@ -81,7 +97,6 @@ class DefenseEngine:
                 time.sleep(10)
     
     def _cleanup_history(self):
-        """Limpa histórico antigo para evitar memória excessiva"""
         if len(self.threats) > self.max_history:
             self.threats = self.threats[:self.max_history]
         if len(self.counter_attacks) > self.max_history:
@@ -106,6 +121,11 @@ class DefenseEngine:
         ip = threat.get("source_ip")
         t_type = threat.get("type")
         
+        # NÃO BLOQUEAR IPS DE REDE LOCAL
+        if self._is_local_ip(ip):
+            self._log(f"⚠️ IP local {ip} ignorado (não será bloqueado)", "warning")
+            return
+        
         if ip in self.blocked_ips:
             return
         
@@ -121,8 +141,13 @@ class DefenseEngine:
             self._block_ip(ip, t_type)
     
     def _block_ip(self, ip, reason):
+        # NÃO BLOQUEAR IPS DE REDE LOCAL
+        if self._is_local_ip(ip):
+            self._log(f"⚠️ IP local {ip} ignorado - não será bloqueado", "warning")
+            return False
+        
         if ip in self.blocked_ips:
-            return
+            return True
         
         success = FirewallUtils.block_ip(ip, reason)
         if success:
@@ -130,9 +155,11 @@ class DefenseEngine:
             self.stats["threats_blocked"] += 1
             self._log(f"🚫 IP {ip} bloqueado - {reason}", "alert")
             self._register_counter_attack(ip, reason)
+            return True
+        return False
     
     def _register_counter_attack(self, ip, threat_type):
-        if not ip:
+        if not ip or self._is_local_ip(ip):
             return
             
         info = []
@@ -152,7 +179,6 @@ class DefenseEngine:
         }
         self.counter_attacks.insert(0, counter)
         
-        # Limitar histórico
         if len(self.counter_attacks) > self.max_history:
             self.counter_attacks = self.counter_attacks[:self.max_history]
         
