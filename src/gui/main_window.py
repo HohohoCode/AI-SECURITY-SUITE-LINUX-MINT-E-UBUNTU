@@ -16,6 +16,7 @@ from src.gui.counter_tab import CounterTab
 from src.gui.logs_tab import LogsTab
 from src.gui.ai_tab import AITab
 from src.gui.connections_tab import ConnectionsTab
+from src.gui.kali_tools_tab import KaliToolsTab
 
 class MainWindow:
     def __init__(self):
@@ -35,21 +36,16 @@ class MainWindow:
         self.setup_ui()
         self.start_updates()
         self.check_firewall_status()
-        
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
     
     def on_closing(self):
-        """Fechar o programa usando o mesmo método do stop.sh"""
         resposta = tk.messagebox.askyesno("Sair", "Deseja realmente sair do programa?")
         if resposta:
             print("🛑 Encerrando programa...")
-            # Usar o mesmo comando do stop.sh
             os.system("sudo pkill -f 'python3.*run.py'")
             os.system("sudo pkill -f 'run.py'")
-            # Fechar a janela
             self.root.quit()
             self.root.destroy()
-            # Forçar saída
             os._exit(0)
     
     def check_firewall_status(self):
@@ -88,6 +84,7 @@ class MainWindow:
             ("🚫 IPs BLOQUEADOS", "firewall", "#ff8800"),
             ("⚔️ CONTRA-ATAQUE", "counter", "#00ff88"),
             ("🔗 CONEXÕES", "connections", "#aa66ff"),
+            ("🐉 KALI TOOLS", "kali", "#ff6600"),
             ("🧠 IA", "ai", "#00d4ff"),
             ("📝 LOGS", "logs", "#ffffff")
         ]
@@ -125,6 +122,7 @@ class MainWindow:
             "firewall": FirewallTab(self.content, self),
             "counter": CounterTab(self.content, self),
             "connections": ConnectionsTab(self.content, self),
+            "kali": KaliToolsTab(self.content, self),
             "ai": AITab(self.content, self),
             "logs": LogsTab(self.content, self)
         }
